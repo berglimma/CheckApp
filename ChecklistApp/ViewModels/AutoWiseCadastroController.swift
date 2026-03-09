@@ -1,22 +1,43 @@
-import Foundation
+import SwiftData
 
-class AutoWiseCadastroController {
-    private let databaseController = AutoWiseCadastroSQLiteController()
+final class AutoWiseCadastroController {
     
-    func saveUser(name: String, email: String, phone: String, password: String, confirmPassword: String, isAdmin: Bool) -> Bool {
-        guard !name.isEmpty, !email.isEmpty, password == confirmPassword else {
-            return false
+    func saveUser(
+        context: ModelContext,
+        name: String,
+        email: String,
+        phone: String,
+        password: String,
+        confirmPassword: String,
+        role: UserRole
+    ) -> Result<Bool, CadastroError> {
+        
+        guard !name.isEmpty,
+              !email.isEmpty,
+              !phone.isEmpty,
+              !password.isEmpty else {
+            return .failure(.camposObrigatorios)
         }
-        return databaseController.saveUser(
+        
+        guard password == confirmPassword else {
+            return .failure(.senhasNaoConferem)
+        }
+        
+        let user = User(
             name: name,
             email: email,
             phone: phone,
             password: password,
-            isAdmin: isAdmin
+            role: role
         )
-    }
-    
-    func cancelRegistration() {
-        print("Cadastro cancelado.")
+        
+        context.insert(user)
+        
+        do {
+            try context.save()
+            return .success(true)
+        } catch {
+            return .failure(.erroSalvar)
+        }
     }
 }

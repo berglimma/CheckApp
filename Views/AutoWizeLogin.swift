@@ -1,27 +1,33 @@
 import SwiftUI
 
 struct AutoWiseLogin: View {
-    @State private var username: String = ""
-    @State private var password: String = ""
+    @State private var alertMessage: String = ""
     @State private var isAnimating: Bool = false
     @State private var navigateToHome: Bool = false
     @State private var navigateToRegister: Bool = false
-    @State private var showAlert: Bool = false // Estado para mostrar alerta
-    @State private var alertMessage: String = "" // Mensagem do alerta
+    @State private var showAlert: Bool = false
+    
+    @State private var viewModel = LoginViewModel()
+    
+    
+    @Environment(\.modelContext) private var context
+    @EnvironmentObject var session: SessionManager
+    
 
     @Environment(\.colorScheme) var colorScheme
     
     var body: some View {
-        NavigationStack { // 🔹 Substitui NavigationView por NavigationStack
+        NavigationStack { 
             VStack {
                 Spacer()
                 
                 // Ícone principal com animação
-                Image(systemName: "checklist.checked")
-                    .font(.system(size: 160))
-                    .foregroundColor(.green)
+                Image(systemName: "checkmark.seal.text.page")
+                    .font(.system(size: 170))
+                    .foregroundColor(colorScheme == .dark ? .green : .black)
                     .padding(.bottom, 20)
                     .offset(x: isAnimating ? 10 : -10)
+                    .scaleEffect(isAnimating ? 1.05 : 0.95)
                     .animation(
                         Animation.easeInOut(duration: 0.6)
                             .repeatForever(autoreverses: true),
@@ -29,13 +35,13 @@ struct AutoWiseLogin: View {
                     )
                 
                 // Título e Subtítulo
-                Text("CheckLock")
-                    .font(.system(size: 48, weight: .bold, design: .rounded))
-                    .foregroundColor(.yellow)
+                Text("Auto Wize")
+                    .font(.system(size: 52, weight: .bold, design: .rounded))
+                    .foregroundColor(colorScheme == .dark ? .green : .black)
                     .padding(.bottom, 20)
                 
                 Text("Checklists Inteligentes para o Seu Negócio")
-                    .font(.system(size: 17, weight: .bold, design: .rounded))
+                    .font(.system(size: 18.5, weight: .bold, design: .rounded))
                     .foregroundColor(.white)
                     .padding(.bottom, 40)
                 
@@ -43,20 +49,40 @@ struct AutoWiseLogin: View {
                 
                 // Campos de texto
                 VStack(spacing: 16) {
-                    TextField("Usuário", text: $username)
-                        .padding(12)
-                        .background(Color(UIColor.systemGray6))
-                        .cornerRadius(20.0)
-                        .frame(width: 300)
-                        .font(.system(size: 18, weight: .regular))
-                    
-                    SecureField("Senha", text: $password)
-                        .padding(12)
-                        .background(Color(UIColor.systemGray6))
-                        .cornerRadius(20.0)
-                        .frame(width: 300)
-                        .font(.system(size: 18, weight: .regular))
-                        .disableAutocorrection(true)
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text("Usuário:")
+                            .font(.headline)
+                            .foregroundColor(colorScheme == .dark ? .white : .black)
+                        
+                      //  TextField("Senha", text: $username)
+                            .padding(12)
+                            .background(Color(UIColor.systemGray6))
+                            .cornerRadius(20.0)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 20)
+                                    .stroke(Color.black, lineWidth: 2)
+                            )
+                            .frame(width: 300)
+                            .font(.system(size: 18, weight: .regular))
+                    }
+
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text("Senha:")
+                            .font(.headline)
+                            .foregroundColor(colorScheme == .dark ? .white : .black)
+                        
+                      //SecureField("", text: $password)
+                            .padding(12)
+                            .background(Color(UIColor.systemGray6))
+                            .cornerRadius(20.0)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 20)
+                                    .stroke(Color.black, lineWidth: 2)
+                            )
+                            .frame(width: 300)
+                            .font(.system(size: 18, weight: .regular))
+                            .disableAutocorrection(true)
+                    }
                 }
                 .padding(.bottom, 30)
                 
@@ -64,14 +90,11 @@ struct AutoWiseLogin: View {
                 HStack(spacing: 16) {
                     // Botão de Login
                     Button(action: {
-                        if username.isEmpty || password.isEmpty {
-                            alertMessage = "Por favor, insira o usuário e a senha."
-                            showAlert = true
-                        } else if DatabaseManager.shared.validateUser(email: username, password: password) {
+                        if let user = viewModel.login(context:context) {
+                            session.currentUser = user
                             navigateToHome = true
                         } else {
-                            alertMessage = "Usuário ou senha inválidos."
-                            showAlert = true
+                            alertMessage = viewModel.errorMessage ?? "Usuário ou Senha Inválidos."
                         }
                     }) {
                         Text("Entrar")
@@ -110,12 +133,15 @@ struct AutoWiseLogin: View {
             .onAppear {
                 isAnimating = true
             }
-            .navigationDestination(isPresented: $navigateToHome) { // 🔹 Substitui NavigationLink(isActive:)
+            .navigationDestination(isPresented: $navigateToHome) { 
                 HomeCheckList()
             }
             .navigationDestination(isPresented: $navigateToRegister) {
                 AutoWiseCadastro()
             }
+            
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(colorScheme == .dark ? Color.black : Color.white)
         }
     }
 }

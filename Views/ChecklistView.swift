@@ -1,4 +1,3 @@
-import PDFKit
 import SwiftUI
 import PencilKit
 
@@ -6,8 +5,10 @@ struct ChecklistView: View {
     @ObservedObject var viewModel = ChecklistEntregaViewModel()
     @Environment(\.colorScheme) var colorScheme
     @State private var canvasView = PKCanvasView()
+    @State private var  voltaHome = false
     @State private var activeAlert: AlertType?
 
+    // 🔹 Enum para alertas
     enum AlertType: Identifiable {
         case saveSuccess, validationError
         
@@ -19,6 +20,7 @@ struct ChecklistView: View {
         }
     }
 
+    // 🔹 Verifica se o formulário está preenchido corretamente
     private var isFormValid: Bool {
         ![(viewModel.checklistEntrega.cliente ?? ""),
           viewModel.checklistEntrega.placa,
@@ -27,29 +29,26 @@ struct ChecklistView: View {
     }
 
     var body: some View {
-        HStack(spacing: 50) {
+        NavigationStack {
             ScrollView {
-                NavigationLink(destination: HomeCheckListView()) {
-                    VStack(alignment: .leading, spacing: 20) {
-                        Text("Checklist de Entrega")
-                            .foregroundColor(colorScheme == .light ? .black : .white)
-                            .font(.system(size: 28, weight: .bold, design: .rounded))
-                    }
-                    .padding()
-                    .background(colorScheme == .dark ? Color.black : Color.white)
-                }
+                VStack(alignment: .leading, spacing: 20) {
+                    Text("Checklist de Entrega")
+                        .foregroundColor(colorScheme == .light ? .black : .white)
+                        .font(.system(size: 28, weight: .bold, design: .rounded))
+                        .frame(maxWidth: .infinity, alignment: .center)
 
-                formFields
-                fuelSection
-                observationsSection
-                signatureSection
-                actionButtons
+                    formFields
+                    fuelSection
+                    observationsSection
+                    signatureSection
+                    actionButtons
+                }
+                .padding()
+                .background(colorScheme == .dark ? Color.black : Color.white)
+                .cornerRadius(35)
+                .shadow(radius: 15)
+                .padding(.horizontal)
             }
-            .padding()
-            .background(colorScheme == .dark ? Color.black : Color.white)
-            .cornerRadius(35)
-            .shadow(radius: 15)
-            .padding(.horizontal)
         }
         .background(Color(UIColor.systemGroupedBackground))
         .alert(item: $activeAlert) { alert in
@@ -62,28 +61,27 @@ struct ChecklistView: View {
         }
     }
 
+    // 🔹 Campos do formulário
     private var formFields: some View {
-        VStack(spacing: 16) {
-            HStack(spacing: 16) {
-                CustomTextField(placeholder: "Cliente", text: Binding(get: { viewModel.checklistEntrega.cliente ?? "" }, set: { viewModel.checklistEntrega.cliente = $0 }))
+            VStack(spacing: 16) {
                 CustomTextField(placeholder: "Placa", text: $viewModel.checklistEntrega.placa)
                 CustomTextField(placeholder: "Funcionário", text: $viewModel.checklistEntrega.funcionario)
-            }
-            
-            HStack(spacing: 16) {
-                DatePicker("Data", selection: $viewModel.checklistEntrega.dataRegistro, displayedComponents: .date)
-                    .labelsHidden()
-                    .padding(12)
-                    .background(Color(UIColor.secondarySystemBackground))
-                    .cornerRadius(10)
-                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(colorScheme == .dark ? Color.white : Color.gray, lineWidth: 1))
                 
-                CustomTextField(placeholder: "Hora (HH:mm)", text: $viewModel.checklistEntrega.horaRegistro)
-                    .keyboardType(.numbersAndPunctuation)
+                HStack {
+                    DatePicker("Data de Entrega", selection: $viewModel.checklistEntrega.dataRegistro, displayedComponents: .date)
+                        .labelsHidden()
+                        .padding(12)
+                        .background(Color(UIColor.secondarySystemBackground))
+                        .cornerRadius(10)
+                        .overlay(RoundedRectangle(cornerRadius: 10).stroke(colorScheme == .dark ? Color.white : Color.gray, lineWidth: 1))
+                    
+                    CustomTextField(placeholder: "Hora (HH:mm)", text: $viewModel.checklistEntrega.horaRegistro)
+                        .keyboardType(.numbersAndPunctuation)
             }
         }
     }
 
+    // 🔹 Seção do combustível
     private var fuelSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Combustível na Entrega")
@@ -96,6 +94,7 @@ struct ChecklistView: View {
         }
     }
 
+    // 🔹 Rótulos do slider de combustível
     private var fuelLabels: some View {
         HStack {
             ForEach(0..<9) { index in
@@ -107,6 +106,7 @@ struct ChecklistView: View {
         }
     }
 
+    // 🔹 Seção de observações
     private var observationsSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Observações de Entrega")
@@ -123,11 +123,11 @@ struct ChecklistView: View {
                     .padding(8)
                     .background(Color(UIColor.secondarySystemBackground))
                     .cornerRadius(10)
-                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(colorScheme == .dark ? Color.white : Color.gray, lineWidth: 1))
             }
         }
     }
 
+    // 🔹 Seção de assinatura
     private var signatureSection: some View {
         VStack(alignment: .leading) {
             Text("Assinatura Digital")
@@ -138,7 +138,6 @@ struct ChecklistView: View {
                     .frame(height: 120)
                     .background(Color(UIColor.secondarySystemBackground))
                     .cornerRadius(10)
-                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(colorScheme == .dark ? Color.white : Color.gray, lineWidth: 1))
                 
                 Button(action: clearCanvas) {
                     Text("Limpar")
@@ -153,25 +152,60 @@ struct ChecklistView: View {
         }
     }
 
+    // 🔹 Botões de ação
     private var actionButtons: some View {
-        HStack {
-            Spacer()
-            HStack(spacing: 25) {
-                Button(action: saveChecklist) {
+        NavigationStack {
+            HStack(spacing: 20) {
+                Button(action: {
+                    if isFormValid {
+                        viewModel.salvarChecklistEntrega()
+                        activeAlert = .saveSuccess
+
+                        if let pdfURL = ChecklistPDFGenerator.gerarPDF(checklist: viewModel, assinatura: canvasView) {
+                            let activityVC = UIActivityViewController(activityItems: [pdfURL], applicationActivities: nil)
+
+                            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                               let rootVC = windowScene.windows.first?.rootViewController {
+                                rootVC.present(activityVC, animated: true, completion: nil)
+                            }
+                        } else {
+                            print("❌ Falha ao gerar o PDF.")
+                        }
+                    } else {
+                        activeAlert = .validationError
+                    }
+                }) {
                     Text("Salvar")
                         .font(.headline)
                         .padding()
-                        .frame(maxWidth: 120)
+                        .frame(maxWidth: .infinity, minHeight: 45)
                         .background(Color.green)
                         .foregroundColor(.white)
                         .cornerRadius(25)
                 }
+
+                Button(action: {
+                    voltaHome = true
+                }) {
+                    Text("Voltar")
+                        .font(.headline)
+                        .padding()
+                        .frame(maxWidth: .infinity)
+                        .background(Color.blue)
+                        .foregroundColor(.white)
+                        .cornerRadius(25)
+                }
             }
-            Spacer()
+            .padding(.top, 10)
+            .navigationDestination(isPresented: $voltaHome) {
+                HomeCheckListView()
+                
+            }
+            .navigationBarBackButtonHidden(true)
         }
-        .padding()
     }
 
+    // 🔹 Função para salvar checklist
     private func saveChecklist() {
         if isFormValid {
             viewModel.salvarChecklistEntrega()
@@ -181,12 +215,14 @@ struct ChecklistView: View {
         }
     }
 
+    // 🔹 Função para limpar assinatura
     private func clearCanvas() {
         canvasView.drawing = PKDrawing()
         canvasView.becomeFirstResponder()
     }
 }
 
+// 🔹 CustomTextField Component
 struct CustomTextField: View {
     let placeholder: String
     @Binding var text: String
@@ -204,6 +240,7 @@ struct CustomTextField: View {
     }
 }
 
+// 🔹 Preview
 struct ChecklistView_Previews: PreviewProvider {
     static var previews: some View {
         Group {

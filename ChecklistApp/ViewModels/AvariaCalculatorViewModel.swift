@@ -1,18 +1,18 @@
-import SwiftUI
 import PDFKit
+import SwiftUI
 
 class AvariaCalculatorViewModel: ObservableObject {
     // Lista de Avarias
     @Published var avarias: [AvariaItem] = []
     
-    // Campos de entrada
+    // Campos de Entrada
     @Published var avariaName: String = ""
     @Published var avariaValue: String = ""
     
     // PDF Gerado
     @Published var generatedPDF: Data? = nil
     
-    // Mensagem de erro
+    // Mensagem de Erro
     @Published var errorMessage: String? = nil
     
     // Adiciona uma Nova Avaria

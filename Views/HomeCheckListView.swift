@@ -5,18 +5,18 @@ struct HomeCheckListView: View {
 
     var body: some View {
         NavigationView {
-            VStack(spacing: 10) {
+            VStack(spacing: 20) {
                 // Título da Tela
                 HStack {
                     Spacer()
-                    Text("Check Lock")
+                    Text("Auto Wize")
                         .fontWeight(.bold)
-                        .foregroundColor(colorScheme == .dark ? .yellow : .green)
+                        .foregroundColor(colorScheme == .dark ? .blue : .green)
                         .font(.system(size: 40, weight: .bold, design: .rounded))
 
                     Image(systemName: "car.fill")
                         .font(.system(size: 45))
-                        .foregroundColor(colorScheme == .dark ? .yellow : .green)
+                        .foregroundColor(colorScheme == .dark ? .blue : .green)
                     Spacer()
                 }
                 .padding(.top)
@@ -55,15 +55,23 @@ struct HomeCheckListView: View {
                     HomeMenuItem(
                         title: "Histórico de Checklists",
                         imageName: "menucard.fill",
-                        destination: HistoricoChecklistsView(),
+                        destination: HistoryCheck(),
                         backgroundColor: .blue
                     )
 
                     HomeMenuItem(
                         title: "Cadastro Usuários",
                         imageName: "person.circle",
-                        destination: AutoWiseCadastroView(),
+                        destination: AutoWiseCadastro(),
                         backgroundColor: .indigo
+                    )
+                    
+                    HomeMenuItem(
+                        title: "Avaliação Trator",
+                        imageName:"car.badge.gearshape" ,
+                        destination: ChecklistView(),
+                        backgroundColor: .yellow
+                        
                     )
                 }
                 .padding(.horizontal)
@@ -75,6 +83,7 @@ struct HomeCheckListView: View {
             .navigationBarHidden(true)
             .padding()
         }
+        .navigationBarBackButtonHidden(true)
     }
 }
 
@@ -144,7 +153,7 @@ struct AvariasCalculator: View {
     }
 }
 
-struct HistoricoChecklistsView: View {
+struct HistoryCheck: View {
     var body: some View {
         Text("Tela de Histórico de Checklists")
             .font(.largeTitle)

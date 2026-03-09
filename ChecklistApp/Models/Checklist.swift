@@ -10,7 +10,7 @@ enum CheckList: String, Codable {
 // Modelo de checklist genérico (Entrega ou Devolução)
 struct Checklist: Identifiable, Codable {
     var id: UUID = UUID()
-    var cliente: String? // Apenas para Entrega
+    var cliente: String? 
     var dataRegistro: Date
     var horaRegistro: String
     var funcionario: String
