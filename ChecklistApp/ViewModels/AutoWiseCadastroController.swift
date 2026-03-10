@@ -17,10 +17,12 @@ final class AutoWiseCadastroController {
               !phone.isEmpty,
               !password.isEmpty else {
             return .failure(.camposObrigatorios)
+            
         }
         
         guard password == confirmPassword else {
             return .failure(.senhasNaoConferem)
+            
         }
         
         let user = User(
