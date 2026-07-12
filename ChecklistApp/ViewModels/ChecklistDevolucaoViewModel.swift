@@ -4,44 +4,32 @@ import Foundation
 
 @MainActor
 class ChecklistDevolucaoViewModel: ObservableObject {
-
     @Published var checklistDevolucao: ChecklistDevolucao
+    @Published var itensInspecao: [InspectionToggleItem]
+    @Published var condicao: CondicaoGeral = .boa
     
-    private let modelContext: ModelContext
-    
-    init(modelContext: ModelContext) {
-        self.modelContext = modelContext
-        self.checklistDevolucao = ChecklistDevolucao()
-    }
-    
-    // MARK: - Salvar Checklist
-    
-    func salvarChecklistDevolucao() {
-        modelContext.insert(checklistDevolucao)
-        salvarHistorico()
-        
-        do {
-            try modelContext.save()
-            print("✅ Checklist e histórico salvos com sucesso no SwiftData.")
-        } catch {
-            print("❌ Erro ao salvar dados:", error)
+    init() {
+        let checklist = ChecklistDevolucao()
+        self.checklistDevolucao = checklist
+        self.itensInspecao = checklist.itensInspecao
+        if let match = CondicaoGeral(rawValue: checklist.condicaoGeral) {
+            condicao = match
         }
     }
     
-    // MARK: - Histórico
-    
-    private func salvarHistorico() {
-        let historico = CheckListHistorico(
-            nomeCliente: checklistDevolucao.funcionario,
-            placa: checklistDevolucao.placa,
-            data: checklistDevolucao.dataRegistro,
-            tipo: "Devolução"
-        )
+    func salvarChecklistDevolucao(context: ModelContext) {
+        checklistDevolucao.condicaoGeral = condicao.rawValue
+        checklistDevolucao.itensInspecao = itensInspecao
         
-        modelContext.insert(historico)
+        context.insert(checklistDevolucao)
+        
+        do {
+            try context.save()
+            print("✅ Checklist de devolução salvo.")
+        } catch {
+            print("❌ Erro ao salvar:", error)
+        }
     }
-    
-    // MARK: - Slider
     
     func sliderLabel(for value: Double) -> String {
         let nivel = Int(round(value * 8))

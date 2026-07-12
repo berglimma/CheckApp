@@ -1,185 +1,221 @@
 import SwiftUI
 
 struct HomeCheckListView: View {
-    @Environment(\.colorScheme) var colorScheme
-
-    var body: some View {
-        NavigationView {
-            VStack(spacing: 20) {
-                // Título da Tela
-                HStack {
-                    Spacer()
-                    Text("Auto Wize")
-                        .fontWeight(.bold)
-                        .foregroundColor(colorScheme == .dark ? .blue : .green)
-                        .font(.system(size: 40, weight: .bold, design: .rounded))
-
-                    Image(systemName: "car.fill")
-                        .font(.system(size: 45))
-                        .foregroundColor(colorScheme == .dark ? .blue : .green)
-                    Spacer()
-                }
-                .padding(.top)
-
-                // Itens do Menu
-                VStack(spacing: 20) {
-                    HomeMenuItem(
-                        title: "Checklist Entrega",
-                        imageName: "car.fill",
-                        destination: ChecklistView(),
-                        backgroundColor: .green
-                    )
-
-                  HomeMenuItem(
-                        title: "Checklist Devolução",
-                        imageName: "car.rear.fill",
-                        destination: ChecklistDevolucaoView(),
-                        backgroundColor: .yellow
-                    )
-                  
-
-                    HomeMenuItem(
-                        title: "Troca Provisória",
-                        imageName: "car.2.fill",
-                        destination: TrocaProvisoriaView(),
-                        backgroundColor: .orange
-                    )
-
-                    HomeMenuItem(
-                        title: "Avarias",
-                        imageName: "car.side.rear.and.collision.and.car.side.front",
-                        destination: AvariaCalculator(),
-                        backgroundColor: .red
-                    )
-
-                    HomeMenuItem(
-                        title: "Histórico de Checklists",
-                        imageName: "menucard.fill",
-                        destination: HistoryCheck(),
-                        backgroundColor: .blue
-                    )
-
-                    HomeMenuItem(
-                        title: "Cadastro Usuários",
-                        imageName: "person.circle",
-                        destination: AutoWiseCadastro(),
-                        backgroundColor: .indigo
-                    )
-                    
-                    HomeMenuItem(
-                        title: "Avaliação Trator",
-                        imageName:"car.badge.gearshape" ,
-                        destination: ChecklistView(),
-                        backgroundColor: .yellow
-                        
-                    )
-                }
-                .padding(.horizontal)
-                .padding(.top)
-
-                Spacer()
-            }
-            .navigationBarTitle("", displayMode: .inline)
-            .navigationBarHidden(true)
-            .padding()
-        }
-        .navigationBarBackButtonHidden(true)
+    @EnvironmentObject private var session: SessionManager
+    @Environment(\.modelContext) private var context
+    @Environment(\.horizontalSizeClass) private var sizeClass
+    
+    private var greetingName: String {
+        session.currentUser?.name.components(separatedBy: " ").first ?? "Operador"
     }
-}
-
-// Componente genérico para itens do menu
-struct HomeMenuItem<Destination: View>: View {
-    let title: String
-    let imageName: String
-    let destination: Destination
-    let backgroundColor: Color
-
+    
+    private var avatarSize: CGFloat {
+        sizeClass == .regular ? 54 : 46
+    }
+    
     var body: some View {
-        NavigationLink(destination: destination) {
-            HStack(spacing: 16) {
-                Image(systemName: imageName)
-                    .font(.system(size: 40))
-                    .foregroundColor(backgroundColor)
-
-                Text(title)
-                    .font(.system(size: 20, weight: .medium, design: .rounded))
-                    .foregroundColor(.primary)
-
-                Spacer()
+        NavigationStack {
+            ZStack {
+                AWScreenBackground()
+                
+                ScrollView(showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: 18) {
+                        header
+                        
+                        AWOperationsForm {
+                            AWMenuRow(
+                                title: "Checklist Entrega",
+                                subtitle: "Registrar saída do veículo",
+                                systemImage: "car.fill",
+                                accent: AWTheme.moduleEntrega,
+                                destination: ChecklistView(),
+                                delay: 0.04,
+                                showsDivider: true
+                            )
+                            
+                            AWMenuRow(
+                                title: "Checklist Devolução",
+                                subtitle: "Registrar retorno e inspeção",
+                                systemImage: "car.rear.fill",
+                                accent: AWTheme.moduleDevolucao,
+                                destination: ChecklistDevolucaoView(),
+                                delay: 0.08,
+                                showsDivider: true
+                            )
+                            
+                            AWMenuRow(
+                                title: "Troca Provisória",
+                                subtitle: "Substituir veículo temporariamente",
+                                systemImage: "car.2.fill",
+                                accent: AWTheme.moduleTroca,
+                                destination: TrocaProvisoriaView(),
+                                delay: 0.12,
+                                showsDivider: true
+                            )
+                            
+                            AWMenuRow(
+                                title: "Avarias",
+                                subtitle: "Calcular e exportar danos",
+                                systemImage: "wrench.and.screwdriver.fill",
+                                accent: AWTheme.moduleAvarias,
+                                destination: AvariaCalculator(),
+                                delay: 0.16,
+                                showsDivider: true
+                            )
+                            
+                            AWMenuRow(
+                                title: "Avaliação Trator",
+                                subtitle: "Checklist de equipamento pesado",
+                                systemImage: "gearshape.2.fill",
+                                accent: AWTheme.moduleTrator,
+                                destination: AvaliacaoTratorView(),
+                                delay: 0.2,
+                                showsDivider: true
+                            )
+                            
+                            AWMenuRow(
+                                title: "Relatórios PDF",
+                                subtitle: "Exportar tudo o que foi registrado",
+                                systemImage: "doc.richtext.fill",
+                                accent: AWTheme.moduleHistorico,
+                                destination: RelatoriosView(),
+                                delay: 0.24,
+                                showsDivider: true
+                            )
+                            
+                            AWMenuRow(
+                                title: "Histórico",
+                                subtitle: "Consultar operações anteriores",
+                                systemImage: "clock.arrow.circlepath",
+                                accent: AWTheme.moduleHistorico,
+                                destination: HistoricoCheck(),
+                                delay: 0.28,
+                                showsDivider: true
+                            )
+                            
+                            AWMenuRow(
+                                title: "Meu perfil",
+                                subtitle: "Foto e dados da conta",
+                                systemImage: "person.crop.circle",
+                                accent: AWTheme.moduleUsuarios,
+                                destination: ProfileView(),
+                                delay: 0.32,
+                                showsDivider: true
+                            )
+                            
+                            AWMenuRow(
+                                title: "Cadastro de Usuários",
+                                subtitle: "Gerenciar acessos da equipe",
+                                systemImage: "person.badge.plus",
+                                accent: AWTheme.moduleUsuarios,
+                                destination: AutoWiseCadastro(),
+                                delay: 0.36,
+                                showsDivider: false
+                            )
+                        }
+                        
+                        logoutButton
+                            .padding(.top, 4)
+                            .padding(.bottom, 24)
+                    }
+                    .awReadableWidth(AWLayout.homeMaxWidth)
+                    .padding(.top, 8)
+                }
             }
-            .padding()
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(backgroundColor, lineWidth: 2)
+            .toolbar(.hidden, for: .navigationBar)
+            .navigationBarTitleDisplayMode(.inline)
+            .onAppear {
+                session.loadProfileImage(context: context)
+            }
+        }
+        .navigationSplitViewStyle(.automatic)
+    }
+    
+    private var header: some View {
+        HStack(alignment: .center, spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Olá, \(greetingName)")
+                    .font(AWTheme.caption(13))
+                    .foregroundStyle(AWTheme.textSecondary)
+                
+                Text("Auto Wize")
+                    .font(AWTheme.brand(sizeClass == .regular ? 34 : 28))
+                    .foregroundStyle(AWTheme.textPrimary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                
+                Text("Painel de operações")
+                    .font(AWTheme.body(14))
+                    .foregroundStyle(AWTheme.textSecondary)
+            }
+            
+            Spacer(minLength: 8)
+            
+            NavigationLink {
+                ProfileView()
+            } label: {
+                profileAvatar
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Meu perfil")
+        }
+        .padding(16)
+        .background(AWTheme.cardFill)
+        .clipShape(RoundedRectangle(cornerRadius: AWTheme.radiusL, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: AWTheme.radiusL, style: .continuous)
+                .stroke(AWTheme.stroke, lineWidth: 1)
+        )
+    }
+    
+    private var profileAvatar: some View {
+        ZStack {
+            Circle()
+                .fill(AWTheme.fieldFill)
+                .frame(width: avatarSize, height: avatarSize)
+                .overlay(
+                    Circle()
+                        .stroke(AWTheme.accent.opacity(0.35), lineWidth: 1.5)
+                )
+            
+            if let image = session.profileImage {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: avatarSize, height: avatarSize)
+                    .clipShape(Circle())
+            } else {
+                Text(String(greetingName.prefix(1)).uppercased())
+                    .font(AWTheme.headline(sizeClass == .regular ? 20 : 17))
+                    .foregroundStyle(AWTheme.accent)
+            }
+        }
+    }
+    
+    private var logoutButton: some View {
+        Button {
+            session.logout()
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "rectangle.portrait.and.arrow.right")
+                Text("Sair da conta")
+            }
+            .font(AWTheme.caption(13))
+            .foregroundStyle(AWTheme.textSecondary)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
+            .background(AWTheme.cardFill)
+            .clipShape(RoundedRectangle(cornerRadius: AWTheme.radiusM, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: AWTheme.radiusM, style: .continuous)
+                    .stroke(AWTheme.stroke, lineWidth: 1)
             )
         }
+        .buttonStyle(.plain)
     }
 }
 
-// Telas de Destino (Exemplos)
-struct ChecklistEntradaView: View {
-    var body: some View {
-        Text("Tela de Checklist de Entrada")
-            .font(.largeTitle)
-            .fontWeight(.bold)
-            .padding()
-    }
-}
-
-struct CheckDevolucaoView: View {
-    var body: some View {
-        Text("Tela de Checklist de Devolução")
-            .font(.largeTitle)
-            .fontWeight(.bold)
-            .padding()
-    }
-}
-
-struct TrocaProvisoriaView: View {
-    var body: some View {
-        Text("Tela de Troca Provisória")
-            .font(.largeTitle)
-            .fontWeight(.bold)
-            .padding()
-    }
-}
-
-struct AvariasCalculator: View {
-    var body: some View {
-        Text("Tela de Avarias")
-            .font(.largeTitle)
-            .fontWeight(.bold)
-            .padding()
-    }
-}
-
-struct HistoryCheck: View {
-    var body: some View {
-        Text("Tela de Histórico de Checklists")
-            .font(.largeTitle)
-            .fontWeight(.bold)
-            .padding()
-    }
-}
-
-struct AutoWiseCadastroView: View {
-    var body: some View {
-        Text("Tela de Cadastro de Usuários")
-            .font(.largeTitle)
-            .fontWeight(.bold)
-            .padding()
-    }
-}
-
-// Preview
-struct HomeCheckListView_Previews: PreviewProvider {
-    static var previews: some View {
-        Group {
-            HomeCheckListView()
-                .preferredColorScheme(.dark)
-
-            HomeCheckListView()
-                .preferredColorScheme(.light)
-        }
-    }
+#Preview {
+    HomeCheckListView()
+        .environmentObject(SessionManager())
 }

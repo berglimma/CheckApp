@@ -2,53 +2,58 @@ import PDFKit
 import SwiftUI
 
 class AvariaCalculatorViewModel: ObservableObject {
-    // Lista de Avarias
     @Published var avarias: [AvariaItem] = []
     
-    // Campos de Entrada
     @Published var avariaName: String = ""
     @Published var avariaValue: String = ""
+    @Published var categoria: AvariaCategoria = .lataria
+    @Published var localDano: String = ""
     
-    // PDF Gerado
+    @Published var cliente: String = ""
+    @Published var funcionario: String = ""
+    @Published var nomeCarro: String = ""
+    @Published var placaCarro: String = ""
+    @Published var kmAtual: String = ""
+    @Published var observacoes: String = ""
+    
     @Published var generatedPDF: Data? = nil
-    
-    // Mensagem de Erro
     @Published var errorMessage: String? = nil
     
-    // Adiciona uma Nova Avaria
     func addAvaria() {
         if let error = validarCampos() {
             errorMessage = error
             return
         }
         
-        // Cria uma nova avaria e adiciona à lista
-        let newAvaria = AvariaItem(name: avariaName, value: Double(avariaValue)!)
+        let newAvaria = AvariaItem(
+            name: avariaName,
+            value: Double(avariaValue.replacingOccurrences(of: ",", with: ".")) ?? 0,
+            categoria: categoria.rawValue,
+            localDano: localDano
+        )
         avarias.append(newAvaria)
         
-        // Limpa os campos de entrada e mensagens de erro
         avariaName = ""
         avariaValue = ""
+        localDano = ""
+        categoria = .lataria
         errorMessage = nil
     }
     
-    // Valida os campos de entrada
     private func validarCampos() -> String? {
-        if avariaName.isEmpty {
-            return "O nome da avaria não pode estar vazio."
+        if avariaName.trimmingCharacters(in: .whitespaces).isEmpty {
+            return "Informe a descrição da avaria."
         }
-        guard let value = Double(avariaValue), value > 0 else {
-            return "Por favor, insira um valor válido para a avaria."
+        guard let value = Double(avariaValue.replacingOccurrences(of: ",", with: ".")), value > 0 else {
+            return "Informe um valor válido maior que zero."
         }
         return nil
     }
     
-    // Remove uma Avaria
     func deleteAvaria(at offsets: IndexSet) {
         avarias.remove(atOffsets: offsets)
     }
     
-    // Formata a data no estilo desejado
     static func formatarData(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
@@ -56,7 +61,6 @@ class AvariaCalculatorViewModel: ObservableObject {
         return formatter.string(from: date)
     }
     
-    // Gera um PDF com os dados das Avarias
     func generatePDF() {
         guard !avarias.isEmpty else {
             errorMessage = "Não há avarias para gerar o relatório."
@@ -66,35 +70,38 @@ class AvariaCalculatorViewModel: ObservableObject {
         let pdfRenderer = UIGraphicsPDFRenderer(bounds: CGRect(x: 0, y: 0, width: 612, height: 792))
         let data = pdfRenderer.pdfData { context in
             context.beginPage()
+            var y: CGFloat = 28
             
-            desenharTitulo(context)
-            desenharListaDeAvarias(context)
+            func draw(_ text: String, bold: Bool = false, size: CGFloat = 13) {
+                let attrs: [NSAttributedString.Key: Any] = [
+                    .font: bold ? UIFont.boldSystemFont(ofSize: size) : UIFont.systemFont(ofSize: size)
+                ]
+                text.draw(at: CGPoint(x: 28, y: y), withAttributes: attrs)
+                y += size + 10
+            }
+            
+            draw("Relatório de Avarias — Auto Wize", bold: true, size: 18)
+            draw("Cliente: \(cliente.isEmpty ? "-" : cliente)")
+            draw("Funcionário: \(funcionario.isEmpty ? "-" : funcionario)")
+            draw("Veículo: \(nomeCarro.isEmpty ? "-" : nomeCarro) | Placa: \(placaCarro.isEmpty ? "-" : placaCarro)")
+            draw("KM: \(kmAtual.isEmpty ? "-" : kmAtual) | Data: \(Self.formatarData(Date()))")
+            y += 8
+            
+            var total: Double = 0
+            for avaria in avarias {
+                let line = "• [\(avaria.categoria)] \(avaria.name) (\(avaria.localDano.isEmpty ? "s/local" : avaria.localDano)) — R$ \(String(format: "%.2f", avaria.value))"
+                draw(line)
+                total += avaria.value
+            }
+            
+            y += 8
+            draw("Total: R$ \(String(format: "%.2f", total))", bold: true, size: 15)
+            if !observacoes.isEmpty {
+                draw("Observações: \(observacoes)")
+            }
         }
         
-        // Salva o PDF gerado
-        self.generatedPDF = data
-    }
-    
-    // Desenha o título no PDF
-    private func desenharTitulo(_ context: UIGraphicsPDFRendererContext) {
-        let title = "Relatório de Avarias"
-        title.draw(at: CGPoint(x: 20, y: 20), withAttributes: [.font: UIFont.boldSystemFont(ofSize: 18)])
-    }
-    
-    // Desenha a lista de avarias e o total no PDF
-    private func desenharListaDeAvarias(_ context: UIGraphicsPDFRendererContext) {
-        var yPosition = 60
-        var totalValue: Double = 0
-        
-        for avaria in avarias {
-            let text = "\(avaria.name): R$ \(String(format: "%.2f", avaria.value))"
-            text.draw(at: CGPoint(x: 20, y: CGFloat(yPosition)), withAttributes: [.font: UIFont.systemFont(ofSize: 14)])
-            yPosition += 20
-            totalValue += avaria.value
-        }
-        
-        // Exibe o total
-        let totalText = "Total: R$ \(String(format: "%.2f", totalValue))"
-        totalText.draw(at: CGPoint(x: 20, y: CGFloat(yPosition + 20)), withAttributes: [.font: UIFont.boldSystemFont(ofSize: 16)])
+        generatedPDF = data
+        errorMessage = nil
     }
 }

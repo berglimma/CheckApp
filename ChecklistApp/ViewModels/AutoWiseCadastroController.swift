@@ -1,4 +1,5 @@
 import SwiftData
+import Foundation
 
 final class AutoWiseCadastroController {
     
@@ -22,7 +23,14 @@ final class AutoWiseCadastroController {
         
         guard password == confirmPassword else {
             return .failure(.senhasNaoConferem)
-            
+        }
+        
+        let descriptor = FetchDescriptor<User>(
+            predicate: #Predicate { $0.email == email }
+        )
+        
+        if let existing = try? context.fetch(descriptor), !existing.isEmpty {
+            return .failure(.emailDuplicado)
         }
         
         let user = User(

@@ -6,6 +6,12 @@
 	objectVersion = 70;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		A1F10011A1F10011A1F10011 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = A1F10001A1F10001A1F10001 /* FirebaseCore */; };
+		A1F10012A1F10012A1F10012 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = A1F10002A1F10002A1F10002 /* FirebaseAuth */; };
+		A1F10013A1F10013A1F10013 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = A1F10003A1F10003A1F10003 /* GoogleSignIn */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		7F7F8C542D70B28F00C6B501 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -32,6 +38,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A1F10011A1F10011A1F10011 /* FirebaseCore in Frameworks */,
+				A1F10012A1F10012A1F10012 /* FirebaseAuth in Frameworks */,
+				A1F10013A1F10013A1F10013 /* GoogleSignIn in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -85,6 +94,9 @@
 			);
 			name = ChecklistApp;
 			packageProductDependencies = (
+				A1F10001A1F10001A1F10001 /* FirebaseCore */,
+				A1F10002A1F10002A1F10002 /* FirebaseAuth */,
+				A1F10003A1F10003A1F10003 /* GoogleSignIn */,
 			);
 			productName = ChecklistApp;
 			productReference = 7F678CC92D22EE29000E0DA0 /* ChecklistApp.app */;
@@ -141,6 +153,10 @@
 				Base,
 			);
 			mainGroup = 7F678CC02D22EE29000E0DA0;
+			packageReferences = (
+				A1F10020A1F10020A1F10020 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+				A1F10021A1F10021A1F10021 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
+			);
 			productRefGroup = 7F678CCA2D22EE29000E0DA0 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -322,11 +338,15 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = ChecklistApp/ChecklistApp.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"ChecklistApp/Preview Content\"";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "App-Info.plist";
+				INFOPLIST_KEY_NSCameraUsageDescription = "O Auto Wize usa a câmera para registrar fotos de checklists, avarias e perfil.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "O Auto Wize acessa suas fotos para anexar imagens em checklists, avaliações, avarias e perfil.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -342,6 +362,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -354,11 +375,15 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = ChecklistApp/ChecklistApp.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"ChecklistApp/Preview Content\"";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "App-Info.plist";
+				INFOPLIST_KEY_NSCameraUsageDescription = "O Auto Wize usa a câmera para registrar fotos de checklists, avarias e perfil.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "O Auto Wize acessa suas fotos para anexar imagens em checklists, avaliações, avarias e perfil.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -374,6 +399,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -458,6 +484,43 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		A1F10020A1F10020A1F10020 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 11.0.0;
+			};
+		};
+		A1F10021A1F10021A1F10021 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/google/GoogleSignIn-iOS";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 8.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		A1F10001A1F10001A1F10001 /* FirebaseCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A1F10020A1F10020A1F10020 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCore;
+		};
+		A1F10002A1F10002A1F10002 /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A1F10020A1F10020A1F10020 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		A1F10003A1F10003A1F10003 /* GoogleSignIn */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A1F10021A1F10021A1F10021 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignIn;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 7F678CC12D22EE29000E0DA0 /* Project object */;
 }

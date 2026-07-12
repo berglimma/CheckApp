@@ -3,140 +3,106 @@ import SwiftData
 import Foundation
 
 struct AutoWiseCadastro: View {
-    
-    @Environment(\.colorScheme) var colorScheme
     @Environment(\.modelContext) private var context
-
+    @Environment(\.dismiss) private var dismiss
+    
     @State private var name: String = ""
     @State private var email: String = ""
     @State private var phone: String = ""
     @State private var password: String = ""
     @State private var confirmPassword: String = ""
     @State private var isAdmin: Bool = false
-    @State private var navigateToHome: Bool = false
-    @State private var navigateToLogin: Bool = false
+    @State private var navigateToUsers: Bool = false
     @State private var showAlert: Bool = false
     @State private var alertMessage: String = ""
-
+    
     private let cadastroController = AutoWiseCadastroController()
     
+    private var canSave: Bool {
+        !name.isEmpty && !email.isEmpty && !password.isEmpty
+    }
+    
     var body: some View {
-        NavigationStack {
-            VStack {
-                Form {
+        ZStack {
+            AWScreenBackground()
+            
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 14) {
+                    AWScreenTitle(
+                        title: "Cadastro de Usuário",
+                        subtitle: "Crie acessos para a equipe"
+                    )
                     
-                    Section(header: Text("Informações Pessoais").font(.headline).foregroundColor(.primary)) {
-                        TextField("Digite seu nome completo", text: $name)
-                            .autocapitalization(.words)
-                            .padding(.vertical, 8)
-                            .textFieldStyle(.roundedBorder)
-                        
-                        /* TextField("Digite seu e-mail", text: $email)
-                         .keyboardType(.emailAddress)
-                         .autocapitalization(.none)
-                         .padding(.vertical, 8)
-                         .textFieldStyle(.roundedBorder) */
-                        
-                        TextField("Digite seu telefone", text: $phone)
-                            .keyboardType(.phonePad)
-                            .padding(.vertical, 8)
-                            .textFieldStyle(.roundedBorder)
+                    AWSectionCard(title: "Informações pessoais") {
+                        VStack(spacing: 12) {
+                            AWTextField(
+                                placeholder: "Nome completo",
+                                text: $name,
+                                autocapitalization: .words
+                            )
+                            AWTextField(
+                                placeholder: "E-mail",
+                                text: $email,
+                                keyboard: .emailAddress,
+                                autocapitalization: .never
+                            )
+                            AWTextField(
+                                placeholder: "Telefone",
+                                text: $phone,
+                                keyboard: .phonePad,
+                                autocapitalization: .never
+                            )
+                        }
                     }
                     
-                    // Seção de Configurações de Conta
-                    Section(header: Text("Configurações de Conta").font(.headline).foregroundColor(.primary)) {
-                        SecureField("Crie uma senha", text: $password)
-                            .padding(.vertical, 8)
-                            .textFieldStyle(.roundedBorder)
-                        
-                        SecureField("Confirme sua senha", text: $confirmPassword)
-                            .padding(.vertical, 8)
-                            .textFieldStyle(.roundedBorder)
-                        
-                        Toggle(isOn: $isAdmin) {
-                            Text("Conta Administrativa")
+                    AWSectionCard(title: "Conta") {
+                        VStack(spacing: 12) {
+                            AWSecureField(placeholder: "Senha", text: $password)
+                            AWSecureField(placeholder: "Confirmar senha", text: $confirmPassword)
+                            
+                            Toggle(isOn: $isAdmin) {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Conta administrativa")
+                                        .font(AWTheme.headline(15))
+                                        .foregroundStyle(AWTheme.textPrimary)
+                                    Text("Acesso completo às operações")
+                                        .font(AWTheme.caption(12))
+                                        .foregroundStyle(AWTheme.textSecondary)
+                                }
+                            }
+                            .tint(AWTheme.accent)
+                            .padding(.top, 4)
                         }
-                        .tint(.accentColor)
                     }
                     
-                    // Seção de Ações (botões estilizados)
-                    Section {
-                        // Botão Salvar
-                        Button(action: handleSave) {
-                            Text("Salvar")
-                                .font(.headline)
-                                .foregroundColor(.white)
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(
-                                    LinearGradient(
-                                        gradient: Gradient(colors: [Color.blue, Color.purple]),
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
-                                .shadow(color: colorScheme == .dark ? .gray.opacity(0.3) : .black.opacity(0.2), radius: 5, x: 0, y: 3)
+                    VStack(spacing: 10) {
+                        AWPrimaryButton(title: "Salvar", isDisabled: !canSave) {
+                            handleSave()
                         }
-                        .padding(.vertical, 8)
-                        .scaleEffect(name.isEmpty || email.isEmpty || password.isEmpty ? 0.95 : 1.0)
-                        .animation(.easeInOut(duration: 0.2), value: name.isEmpty || email.isEmpty || password.isEmpty)
-                        .disabled(name.isEmpty || email.isEmpty || password.isEmpty)
-                        
-                        // Botão Cancelar
-                        Button(action: handleCancel) {
-                            Text("Cancelar")
-                                .font(.headline)
-                                .foregroundColor(.red)
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(
-                                    colorScheme == .dark ?
-                                    Color.gray.opacity(0.2) :
-                                        Color.red.opacity(0.1)
-                                )
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .stroke(Color.red, lineWidth: 1)
-                                )
+                        AWSecondaryButton(title: "Cancelar") {
+                            dismiss()
                         }
-                        .padding(.vertical, 8)
                     }
-                    .listRowBackground(Color.clear)
+                    .padding(.bottom, 28)
                 }
-                .scrollContentBackground(.hidden)
-                .background(
-                    colorScheme == .dark ?
-                    LinearGradient(gradient: Gradient(colors: [.gray.opacity(0.3), .black]), startPoint: .top, endPoint: .bottom) :
-                        LinearGradient(gradient: Gradient(colors: [.white, .gray.opacity(0.1)]), startPoint: .top, endPoint: .bottom)
-                )
+                .awReadableWidth(AWLayout.formMaxWidth)
+                .padding(.top, 8)
+                .padding(.bottom, 28)
             }
-            .navigationTitle("Cadastro de Usuário")
-            .navigationBarTitleDisplayMode(.inline)
-            .alert(isPresented: $showAlert) {
-                Alert(
-                    title: Text("AutoWise"),
-                    message: Text(alertMessage),
-                    dismissButton: .default(Text("OK"), action: {
-                        // Ação adicional se necessário
-                    })
-                )
-            }
-            .navigationDestination(isPresented: $navigateToHome) {
-                UsersListView()
-            }
-            }
-            .navigationDestination(isPresented: $navigateToLogin) {
-                AutoWiseLogin()
-            }
+        }
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(AWTheme.screenGray, for: .navigationBar)
+        .alert("Auto Wize", isPresented: $showAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(alertMessage)
+        }
+        .navigationDestination(isPresented: $navigateToUsers) {
+            UsersListView()
         }
     }
     
-    // Funções handleSave e handleCancel (mantidas)
-    
     private func handleSave() {
-        
         guard isValidEmail(email) else {
             alertMessage = "Formato de e-mail inválido."
             showAlert = true
@@ -144,7 +110,6 @@ struct AutoWiseCadastro: View {
         }
         
         let role: UserRole = isAdmin ? .admin : .normal
-        
         let result = cadastroController.saveUser(
             context: context,
             name: name,
@@ -156,28 +121,23 @@ struct AutoWiseCadastro: View {
         )
         
         switch result {
-            
         case .success:
             alertMessage = "Conta criada com sucesso."
             showAlert = true
-            
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                navigateToHome = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                navigateToUsers = true
             }
-            
         case .failure(let error):
-            
             switch error {
             case .camposObrigatorios:
                 alertMessage = "Todos os campos são obrigatórios."
             case .senhasNaoConferem:
                 alertMessage = "As senhas não coincidem."
             case .emailDuplicado:
-                alertMessage = "Email já cadastrado."
+                alertMessage = "E-mail já cadastrado."
             case .erroSalvar:
                 alertMessage = "Erro ao salvar usuário."
             }
-            
             showAlert = true
         }
     }
@@ -187,34 +147,11 @@ struct AutoWiseCadastro: View {
         let emailPredicate = NSPredicate(format: "SELF MATCHES %@", emailRegEx)
         return emailPredicate.evaluate(with: email)
     }
-    
-    private func handleCancel() {
-        alertMessage = "Cadastro cancelado. Voltando para o login."
-        showAlert = true
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            navigateToLogin = true
-        }
-    }
-    
-    // Tela de destino (mantida)
-    struct HomeCheckListView: View {
-        var body: some View {
-            Text("Bem-vindo à HomeCheckList!")
-                .font(.largeTitle)
-                .padding()
-        }
-    }
-    
-    // Preview
-    struct AutoWiseCadastroView_Previews: PreviewProvider {
-        static var previews: some View {
-            Group {
-                AutoWiseCadastro()
-                    .preferredColorScheme(.dark)
-                
-                AutoWiseCadastro()
-                    .preferredColorScheme(.light)
-            }
-        }
-    }
+}
 
+#Preview {
+    NavigationStack {
+        AutoWiseCadastro()
+    }
+    .modelContainer(for: [User.self], inMemory: true)
+}

@@ -23,7 +23,7 @@ struct ChecklistPDFGenerator {
         do {
             try renderer.writePDF(to: url) { context in
                 context.beginPage()
-                let cgContext = context.cgContext
+                _ = context.cgContext
 
                 var y: CGFloat = 20
                 let lineHeight: CGFloat = 24
@@ -52,8 +52,12 @@ struct ChecklistPDFGenerator {
                 y += 20
                 draw("Assinatura:", "")
 
-                let image = assinatura.drawing.image(from: assinatura.bounds, scale: 1)
-                image.draw(in: CGRect(x: 20, y: y + 10, width: 300, height: 100))
+                if let image = SignatureCapture.image(from: assinatura.drawing) {
+                    let rect = CGRect(x: 20, y: y + 10, width: 300, height: 100)
+                    UIColor.white.setFill()
+                    context.cgContext.fill(rect)
+                    image.draw(in: rect.insetBy(dx: 4, dy: 4))
+                }
             }
             
             return url

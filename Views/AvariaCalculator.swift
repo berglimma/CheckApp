@@ -3,140 +3,227 @@ import PDFKit
 
 struct AvariaCalculator: View {
     @StateObject private var viewModel = AvariaCalculatorViewModel()
-    @State private var showPDFShareSheet = false
-    @Environment(\.dismiss) var dismiss
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var context
     
-    @State private var nomeCarro: String = ""
-    @State private var placaCarro: String = ""
+    @State private var reportId = UUID()
+    @State private var showAlert = false
+    @State private var alertMessage = ""
+    @State private var saved = false
+    
+    private var totalAvarias: Double {
+        viewModel.avarias.reduce(0) { $0 + $1.value }
+    }
+    
+    private var canGenerate: Bool {
+        !viewModel.avarias.isEmpty
+            && !viewModel.placaCarro.trimmingCharacters(in: .whitespaces).isEmpty
+            && !viewModel.cliente.trimmingCharacters(in: .whitespaces).isEmpty
+    }
     
     var body: some View {
-        Form {
-            // 🔹 Seção de Informações do Carro
-            Section(header: Text("INFORMAÇÕES DO CARRO")) {
-                VStack(spacing: 8) {
-                    TextField("Nome do Carro", text: $nomeCarro)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                    
-                    TextField("Placa do Carro", text: $placaCarro)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                    
-                    Text("Data: \(Self.formatarData(Date()))")
-                        .font(.system(size: 16, weight: .medium, design: .rounded))
-                        .foregroundColor(.secondary)
-                }
-            }
+        ZStack {
+            AWScreenBackground()
             
-            // 🔹 Seção de Adicionar Avarias
-            Section(header: Text("ADICIONAR AVARIA")) {
-                VStack(spacing: 8) {
-                    TextField("Descrição da Avaria", text: $viewModel.avariaName)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 14) {
+                    AWScreenTitle(
+                        title: "Cálculo de Avarias",
+                        subtitle: "Registre danos e gere o relatório"
+                    )
                     
-                    TextField("Valor (R$)", text: $viewModel.avariaValue)
-                        .keyboardType(.decimalPad)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                    
-                    Button(action: viewModel.addAvaria) {
-                        Text("Adicionar Avaria")
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.green)
-                            .foregroundColor(.white)
-                            .cornerRadius(8)
+                    AWSectionCard(title: "Identificação") {
+                        VStack(spacing: 12) {
+                            AWTextField(placeholder: "Cliente", text: $viewModel.cliente)
+                            AWTextField(placeholder: "Funcionário", text: $viewModel.funcionario)
+                            AWTextField(placeholder: "Modelo / veículo", text: $viewModel.nomeCarro)
+                            AWTextField(
+                                placeholder: "Placa",
+                                text: $viewModel.placaCarro,
+                                autocapitalization: .characters
+                            )
+                            AWTextField(
+                                placeholder: "KM atual",
+                                text: $viewModel.kmAtual,
+                                keyboard: .numberPad,
+                                autocapitalization: .never
+                            )
+                            Text("Data: \(AvariaCalculatorViewModel.formatarData(Date()))")
+                                .font(AWTheme.caption(13))
+                                .foregroundStyle(AWTheme.textSecondary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
                     }
-                    .disabled(viewModel.avariaName.isEmpty || viewModel.avariaValue.isEmpty)
-                }
-            }
-            
-            // 🔹 Seção de Lista de Avarias
-            Section(header: Text("AVARIAS ADICIONADAS")) {
-                if viewModel.avarias.isEmpty {
-                    Text("Nenhuma avaria adicionada ainda.")
-                        .foregroundColor(.gray)
-                        .multilineTextAlignment(.center)
-                } else {
-                    List {
-                        ForEach(viewModel.avarias) { avaria in
-                            HStack {
-                                Text(avaria.name)
-                                Spacer()
-                                Text("R$ \(String(format: "%.2f", avaria.value))")
-                                    .foregroundColor(.gray)
+                    
+                    AWSectionCard(title: "Nova avaria") {
+                        VStack(spacing: 12) {
+                            AWPickerField(
+                                title: "Categoria",
+                                selection: $viewModel.categoria,
+                                options: AvariaCategoria.allCases
+                            )
+                            AWTextField(placeholder: "Descrição do dano", text: $viewModel.avariaName)
+                            AWTextField(
+                                placeholder: "Local do dano (ex.: porta D.E.)",
+                                text: $viewModel.localDano
+                            )
+                            AWTextField(
+                                placeholder: "Valor (R$)",
+                                text: $viewModel.avariaValue,
+                                keyboard: .decimalPad,
+                                autocapitalization: .never
+                            )
+                            
+                            if let error = viewModel.errorMessage {
+                                Text(error)
+                                    .font(AWTheme.caption(12))
+                                    .foregroundStyle(AWTheme.danger)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                            
+                            AWPrimaryButton(
+                                title: "Adicionar avaria",
+                                isDisabled: viewModel.avariaName.isEmpty || viewModel.avariaValue.isEmpty
+                            ) {
+                                viewModel.addAvaria()
                             }
                         }
-                        .onDelete(perform: viewModel.deleteAvaria)
-                    }
-                    .frame(height: 120)
-                }
-            }
-            
-            // 🔹 Botões de Ação
-            Section {
-                VStack(spacing: 12) {
-                    Button(action: {
-                        viewModel.generatePDF()
-                        showPDFShareSheet = true
-                    }) {
-                        Text("Gerar PDF")
-                            .frame(maxWidth: 200)
-                            .frame(height: 45)
-                            .background(Color.red)
-                            .foregroundColor(.white)
-                            .cornerRadius(8)
                     }
                     
-                    Button(action: {
-                        dismiss() // 🔹 Fecha a tela corretamente
-                    }) {
-                        Text("Voltar")
-                            .frame(maxWidth: 200)
-                            .frame(height: 45)
-                            .background(Color.blue)
-                            .foregroundColor(.white)
-                            .cornerRadius(8)
+                    AWSectionCard(title: "Avarias adicionadas") {
+                        if viewModel.avarias.isEmpty {
+                            Text("Nenhuma avaria adicionada ainda.")
+                                .font(AWTheme.body(14))
+                                .foregroundStyle(AWTheme.textSecondary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        } else {
+                            VStack(spacing: 0) {
+                                ForEach(Array(viewModel.avarias.enumerated()), id: \.element.id) { index, avaria in
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        HStack(alignment: .top, spacing: 10) {
+                                            VStack(alignment: .leading, spacing: 2) {
+                                                Text(avaria.name)
+                                                    .font(AWTheme.headline(14))
+                                                    .foregroundStyle(AWTheme.textPrimary)
+                                                Text("\(avaria.categoria) · \(avaria.localDano.isEmpty ? "Local não informado" : avaria.localDano)")
+                                                    .font(AWTheme.caption(12))
+                                                    .foregroundStyle(AWTheme.textSecondary)
+                                            }
+                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                            
+                                            Text("R$ \(String(format: "%.2f", avaria.value))")
+                                                .font(AWTheme.headline(14))
+                                                .foregroundStyle(AWTheme.moduleAvarias)
+                                                .fixedSize()
+                                            
+                                            Button {
+                                                viewModel.deleteAvaria(at: IndexSet(integer: index))
+                                            } label: {
+                                                Image(systemName: "trash")
+                                                    .font(.system(size: 13, weight: .semibold))
+                                                    .foregroundStyle(AWTheme.danger)
+                                            }
+                                            .buttonStyle(.plain)
+                                        }
+                                    }
+                                    .padding(.vertical, 10)
+                                    
+                                    if index < viewModel.avarias.count - 1 {
+                                        Divider().opacity(0.35)
+                                    }
+                                }
+                                
+                                Divider().padding(.vertical, 6)
+                                
+                                HStack {
+                                    Text("Total")
+                                        .font(AWTheme.headline(15))
+                                    Spacer()
+                                    Text("R$ \(String(format: "%.2f", totalAvarias))")
+                                        .font(AWTheme.headline(16))
+                                        .foregroundStyle(AWTheme.accent)
+                                }
+                            }
+                        }
                     }
+                    
+                    AWSectionCard(title: "Observações") {
+                        AWNotesEditor(text: $viewModel.observacoes)
+                    }
+                    
+                    AWSectionCard {
+                        AWPhotoGallery(
+                            ownerId: reportId.uuidString,
+                            ownerType: .avaria,
+                            title: "Fotos das avarias"
+                        )
+                    }
+                    
+                    VStack(spacing: 10) {
+                        AWPrimaryButton(
+                            title: "Salvar avarias",
+                            isDisabled: !canGenerate
+                        ) {
+                            save()
+                        }
+                        
+                        AWSecondaryButton(title: "Voltar") {
+                            dismiss()
+                        }
+                    }
+                    .padding(.bottom, 28)
                 }
+                .awReadableWidth(AWLayout.formMaxWidth)
+                .padding(.top, 8)
+                .padding(.bottom, 28)
             }
         }
-    
-        .navigationTitle("Cálculo de Avarias")
         .navigationBarTitleDisplayMode(.inline)
-        .navigationBarBackButtonHidden(false)
-        .sheet(isPresented: $showPDFShareSheet) {
-            if let pdfData = viewModel.generatedPDF {
-                ShareSheet(activityItems: [pdfData])
+        .toolbarBackground(AWTheme.screenGray, for: .navigationBar)
+        .alert("Auto Wize", isPresented: $showAlert) {
+            Button("OK") {
+                if saved { dismiss() }
             }
+        } message: {
+            Text(alertMessage)
         }
     }
     
-    // 🔹 Formata a data no estilo desejado
-    static func formatarData(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .none
-        return formatter.string(from: date)
-    }
-}
-
-// 🔹 Extensão para compartilhamento de arquivos
-struct ShareSheet: UIViewControllerRepresentable {
-    var activityItems: [Any]
-    
-    func makeUIViewController(context: Context) -> UIActivityViewController {
-        UIActivityViewController(activityItems: activityItems, applicationActivities: nil)
-    }
-    
-    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
-}
-
-// 🔹 Preview no SwiftUI
-struct AvariaCalculatorView_Previews: PreviewProvider {
-    static var previews: some View {
-        Group {
-            AvariaCalculator()
-                .preferredColorScheme(.dark)
-            AvariaCalculator()
-                .preferredColorScheme(.light)
+    private func save() {
+        var campos: [String: String] = [
+            "Veículo": viewModel.nomeCarro,
+            "KM": viewModel.kmAtual,
+            "Total": String(format: "R$ %.2f", totalAvarias)
+        ]
+        for (index, avaria) in viewModel.avarias.enumerated() {
+            campos["Avaria \(index + 1)"] = "[\(avaria.categoria)] \(avaria.name) (\(avaria.localDano)) = R$ \(String(format: "%.2f", avaria.value))"
         }
+        
+        let snapshot = ReportSnapshot(
+            id: reportId,
+            tipo: "Avarias",
+            titulo: "Relatório de Avarias",
+            cliente: viewModel.cliente,
+            placa: viewModel.placaCarro,
+            funcionario: viewModel.funcionario,
+            dataRegistro: Date(),
+            horaRegistro: {
+                let f = DateFormatter()
+                f.dateFormat = "HH:mm"
+                return f.string(from: Date())
+            }(),
+            campos: campos,
+            observacoes: viewModel.observacoes,
+            ownerId: reportId.uuidString
+        )
+        ReportRepository.save(context: context, snapshot: snapshot)
+        
+        alertMessage = "Avarias salvas. Você pode exportar o PDF em Histórico ou Relatórios."
+        saved = true
+        showAlert = true
     }
+}
+
+#Preview {
+    NavigationStack { AvariaCalculator() }
 }

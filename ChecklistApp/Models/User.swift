@@ -1,36 +1,36 @@
-//
-//  User.swift
-//  ChecklistApp
-//
-//  Created by Luan Carlos on 13/02/26.
-//
 import Foundation
 import SwiftData
 
 @Model
 final class User {
-    var name: String
+    var name: String = ""
     
     @Attribute(.unique)
-    var email: String
+    var email: String = ""
     
-    var phone: String
-    var password: String
-    var createdAt: Date
-    var role: UserRole
+    var phone: String = ""
+    var password: String = ""
+    var createdAt: Date = Date()
+    var roleRaw: String = UserRole.normal.rawValue
+    var photoOwnerId: String = ""
+    
+    var role: UserRole {
+        get { UserRole(rawValue: roleRaw) ?? .normal }
+        set { roleRaw = newValue.rawValue }
+    }
     
     init(name: String,
          email: String,
          phone: String,
          password: String,
          role: UserRole) {
-        
         self.name = name
         self.email = email
         self.phone = phone
         self.password = password
-        self.role = role
+        self.roleRaw = role.rawValue
         self.createdAt = Date()
+        self.photoOwnerId = UUID().uuidString
     }
 }
 

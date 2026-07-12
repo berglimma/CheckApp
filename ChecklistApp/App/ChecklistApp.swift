@@ -1,10 +1,90 @@
 import SwiftUI
+import SwiftData
+import UIKit
 
 @main
 struct ChecklistAppApp: App {
+    @StateObject private var session = SessionManager()
+    
+    init() {
+        AuthService.shared.configureIfNeeded()
+    }
+    
+    private let modelContainer: ModelContainer = {
+        let schema = Schema([
+            User.self,
+            Car.self,
+            Client.self,
+            ChecklistDevolucao.self,
+            CheckListHistorico.self,
+            PhotoAttachment.self
+        ])
+        
+        do {
+            return try ModelContainer(for: schema)
+        } catch {
+            let storeURL = URL.applicationSupportDirectory.appending(path: "default.store")
+            try? FileManager.default.removeItem(at: storeURL)
+            try? FileManager.default.removeItem(at: storeURL.appendingPathExtension("wal"))
+            try? FileManager.default.removeItem(at: storeURL.appendingPathExtension("shm"))
+            
+            do {
+                return try ModelContainer(for: schema)
+            } catch {
+                fatalError("Falha ao criar ModelContainer: \(error)")
+            }
+        }
+    }()
+    
     var body: some Scene {
         WindowGroup {
-           AutoWiseLogin()
+            Group {
+                if session.isLoggedIn {
+                    HomeCheckListView()
+                        .transition(.opacity)
+                } else {
+                    AutoWiseLogin()
+                        .transition(.opacity)
+                }
+            }
+            .animation(.easeInOut(duration: 0.25), value: session.isLoggedIn)
+            .environmentObject(session)
+            .preferredColorScheme(.dark)
+            .background(AWTheme.screenGray.ignoresSafeArea())
+            .tint(AWTheme.accent)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .task {
+                await MainActor.run {
+                    Self.configureUIAppearance()
+                }
+            }
+            .onOpenURL { url in
+                _ = AuthService.shared.handleGoogleURL(url)
+            }
         }
+        .modelContainer(modelContainer)
+    }
+    
+    @MainActor
+    private static func configureUIAppearance() {
+        let screen = AWTheme.uiScreen
+        
+        let nav = UINavigationBarAppearance()
+        nav.configureWithOpaqueBackground()
+        nav.backgroundColor = screen
+        nav.titleTextAttributes = [.foregroundColor: UIColor.white]
+        nav.largeTitleTextAttributes = [.foregroundColor: UIColor.white]
+        
+        let navigationBar = UINavigationBar.appearance()
+        navigationBar.standardAppearance = nav
+        navigationBar.scrollEdgeAppearance = nav
+        navigationBar.compactAppearance = nav
+        navigationBar.tintColor = UIColor(AWTheme.accent)
+        
+        UITableView.appearance().backgroundColor = screen
+        UICollectionView.appearance().backgroundColor = screen
+        // Não usar UITextField/UITextView.appearance().keyboardAppearance —
+        // no iOS recente isso crasha (setKeyboardAppearance off main thread).
+        // preferredColorScheme(.dark) já aplica teclado escuro.
     }
 }
