@@ -113,6 +113,7 @@ enum VehicleCatalog {
                 .init(name: "Virtus", category: .sedan),
                 .init(name: "Nivus", category: .suv),
                 .init(name: "T-Cross", category: .suv),
+                .init(name: "Tera", category: .suv),
                 .init(name: "Saveiro", category: .pickup),
                 .init(name: "ID.4", category: .suv, powertrain: .electric)
             ]
