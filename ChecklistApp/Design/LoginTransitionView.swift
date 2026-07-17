@@ -29,9 +29,16 @@ struct LoginTransitionView: View {
             let height = max(geo.size.height, 1)
             let metrics = layoutMetrics(width: width, height: height)
             let travel = width + metrics.carWidth + 100
+            // Margem lateral da estrada: safe area + respiro para o raio não cortar
+            let roadSideInset = max(
+                metrics.roadSideMargin,
+                max(geo.safeAreaInsets.leading, geo.safeAreaInsets.trailing) + metrics.roadSideMargin
+            )
+            let roadWidth = max(120, width - (roadSideInset * 2))
             
             ZStack {
                 AWScreenBackground()
+                    .ignoresSafeArea()
                 
                 RadialGradient(
                     colors: [
@@ -42,6 +49,7 @@ struct LoginTransitionView: View {
                     startRadius: 24,
                     endRadius: max(width, height) * 0.6
                 )
+                .ignoresSafeArea()
                 
                 VStack(spacing: metrics.contentSpacing) {
                     Spacer(minLength: metrics.topSpacer)
@@ -72,11 +80,12 @@ struct LoginTransitionView: View {
                             .foregroundStyle(AWTheme.textSecondary)
                             .opacity(subtitleOpacity)
                     }
-                    .padding(.horizontal, metrics.horizontalPadding)
+                    .padding(.horizontal, max(metrics.horizontalPadding, roadSideInset))
                     
                     Spacer(minLength: metrics.midSpacer)
                     
                     ZStack {
+                        // Estrada com largura explícita — evita corte nas bordas L/R
                         RoundedRectangle(cornerRadius: metrics.roadCorner, style: .continuous)
                             .fill(
                                 LinearGradient(
@@ -88,14 +97,14 @@ struct LoginTransitionView: View {
                                     endPoint: .bottom
                                 )
                             )
-                            .frame(height: metrics.roadHeight)
                             .overlay(
                                 RoundedRectangle(cornerRadius: metrics.roadCorner, style: .continuous)
-                                    .stroke(Color.white.opacity(0.10), lineWidth: 1)
+                                    .stroke(Color.white.opacity(0.12), lineWidth: 1)
                             )
-                            .padding(.horizontal, metrics.horizontalPadding)
+                            .frame(width: roadWidth, height: metrics.roadHeight)
                             .offset(y: metrics.roadOffsetY)
                         
+                        // Faixa tracejada mascarada exatamente na mesma largura da estrada
                         HStack(spacing: metrics.dashSpacing) {
                             ForEach(0..<28, id: \.self) { _ in
                                 Capsule()
@@ -103,12 +112,10 @@ struct LoginTransitionView: View {
                                     .frame(width: metrics.dashWidth, height: 4)
                             }
                         }
+                        .frame(width: roadWidth - 24, alignment: .leading)
                         .offset(x: roadOffset, y: metrics.roadOffsetY)
-                        .mask(
-                            RoundedRectangle(cornerRadius: metrics.roadCorner, style: .continuous)
-                                .frame(height: metrics.roadHeight)
-                                .padding(.horizontal, metrics.horizontalPadding + 12)
-                        )
+                        .frame(width: roadWidth - 24, height: metrics.roadHeight, alignment: .center)
+                        .clipped()
                         
                         Image("transition_sedan")
                             .resizable()
@@ -124,13 +131,13 @@ struct LoginTransitionView: View {
                             )
                             .accessibilityHidden(true)
                     }
-                    .frame(height: metrics.sceneHeight)
-                    .frame(maxWidth: .infinity)
-                    // Permite o carro entrar/sair sem cortar verticalmente
+                    .frame(width: width, height: metrics.sceneHeight)
                     .padding(.vertical, 8)
                     
                     Spacer(minLength: metrics.bottomSpacer)
                 }
+                .padding(.top, geo.safeAreaInsets.top)
+                .padding(.bottom, max(geo.safeAreaInsets.bottom, 8))
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
@@ -160,6 +167,7 @@ struct LoginTransitionView: View {
             brandSize: brandSize,
             subtitleSize: isPad ? 16 : (compactHeight ? 12 : 13),
             horizontalPadding: isPad ? 48 : 20,
+            roadSideMargin: isPad ? 36 : 22,
             contentSpacing: isPad ? 20 : 10,
             topSpacer: isPad ? max(48, height * 0.12) : (compactHeight ? 36 : max(40, height * 0.08)),
             midSpacer: isPad ? 36 : (compactHeight ? 18 : 28),
@@ -205,6 +213,7 @@ private struct TransitionMetrics {
     let brandSize: CGFloat
     let subtitleSize: CGFloat
     let horizontalPadding: CGFloat
+    let roadSideMargin: CGFloat
     let contentSpacing: CGFloat
     let topSpacer: CGFloat
     let midSpacer: CGFloat
