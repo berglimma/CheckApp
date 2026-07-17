@@ -19,19 +19,18 @@ struct AutoWiseCadastro: View {
     @State private var phone: String = ""
     @State private var password: String = ""
     @State private var confirmPassword: String = ""
-    @State private var isAdmin: Bool = false
+    @State private var selectedRole: UserRole = .operador
     @State private var showAlert: Bool = false
     @State private var alertMessage: String = ""
     @State private var shouldReturnToLogin: Bool = false
     
     private let cadastroController = AutoWiseCadastroController()
     
-    /// Somente admin logado pode criar outra conta admin.
+    /// Somente admin logado pode escolher perfil Administrador.
     private var canAssignAdmin: Bool {
         session.isLoggedIn && session.isAdmin
     }
     
-    /// Ainda há vaga no teto de 5 administradores.
     private var hasAdminSlot: Bool {
         SessionManager.canAddAdmin(context: context)
     }
@@ -45,6 +44,17 @@ struct AutoWiseCadastro: View {
         !session.isLoggedIn && SessionManager.userCount(context: context) == 0
     }
     
+    private var availableRoles: [UserRole] {
+        if isBootstrapAdmin {
+            return [.admin]
+        }
+        if canAssignAdmin {
+            return UserRole.cadastroCases
+        }
+        // Auto-cadastro público: operador ou funcionário
+        return [.operador, .funcionario]
+    }
+    
     private var canSave: Bool {
         !name.isEmpty && !email.isEmpty && !password.isEmpty
     }
@@ -56,20 +66,38 @@ struct AutoWiseCadastro: View {
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 14) {
                     AWScreenTitle(
-                        title: "Cadastro de Funcionário",
-                        subtitle: canAssignAdmin
-                            ? (hasAdminSlot
-                               ? "Administradores \(adminCount)/\(SessionManager.maxAdmins) — o nome aparece em Funcionário responsável"
-                               : "Limite de \(SessionManager.maxAdmins) admins — cadastre operadores/funcionários")
-                            : (isBootstrapAdmin
-                               ? "Primeira conta: será administradora"
-                               : "Crie sua conta de operador/funcionário")
+                        title: "Cadastro de Usuário",
+                        subtitle: isBootstrapAdmin
+                            ? "Primeira conta: perfil Administrador"
+                            : (canAssignAdmin
+                               ? "Escolha o perfil: Operador, Funcionário ou Administrador (\(adminCount)/\(SessionManager.maxAdmins))"
+                               : "Escolha Operador ou Funcionário")
                     )
                     
-                    AWSectionCard(title: "Dados do funcionário") {
+                    AWSectionCard(title: "Perfil de cadastro") {
+                        VStack(spacing: 10) {
+                            ForEach(availableRoles) { role in
+                                profileOption(role)
+                            }
+                            
+                            if canAssignAdmin && !hasAdminSlot {
+                                HStack(alignment: .top, spacing: 8) {
+                                    Image(systemName: "exclamationmark.triangle.fill")
+                                        .foregroundStyle(AWTheme.warning)
+                                    Text("Limite de \(SessionManager.maxAdmins) administradores atingido. Selecione Operador ou Funcionário, ou libere vaga em Equipe.")
+                                        .font(AWTheme.caption(12))
+                                        .foregroundStyle(AWTheme.textSecondary)
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.top, 4)
+                            }
+                        }
+                    }
+                    
+                    AWSectionCard(title: "Dados pessoais") {
                         VStack(spacing: 12) {
                             AWTextField(
-                                placeholder: "Nome do funcionário",
+                                placeholder: "Nome completo",
                                 text: $name,
                                 autocapitalization: .words
                             )
@@ -90,53 +118,12 @@ struct AutoWiseCadastro: View {
                     
                     AWSectionCard(title: "Acesso ao app") {
                         VStack(alignment: .leading, spacing: 12) {
-                            Text("O nome do funcionário será listado automaticamente em Entrega, Devolução, Troca, Avarias e Avaliação.")
+                            Text("O nome cadastrado aparece em Funcionário responsável nas operações.")
                                 .font(AWTheme.caption(12))
                                 .foregroundStyle(AWTheme.textSecondary)
                             
                             AWSecureField(placeholder: "Senha", text: $password)
                             AWSecureField(placeholder: "Confirmar senha", text: $confirmPassword)
-                            
-                            if canAssignAdmin {
-                                if hasAdminSlot {
-                                    Toggle(isOn: $isAdmin) {
-                                        VStack(alignment: .leading, spacing: 2) {
-                                            Text("Conta administrativa")
-                                                .font(AWTheme.headline(15))
-                                                .foregroundStyle(AWTheme.textPrimary)
-                                            Text("Vagas restantes: \(SessionManager.adminSlotsRemaining(context: context)) de \(SessionManager.maxAdmins)")
-                                                .font(AWTheme.caption(12))
-                                                .foregroundStyle(AWTheme.textSecondary)
-                                        }
-                                    }
-                                    .tint(AWTheme.accent)
-                                    .padding(.top, 4)
-                                } else {
-                                    HStack(alignment: .top, spacing: 8) {
-                                        Image(systemName: "exclamationmark.triangle.fill")
-                                            .foregroundStyle(AWTheme.warning)
-                                        Text("Limite de \(SessionManager.maxAdmins) administradores atingido. Você só pode cadastrar operadores. Exclua ou rebaixe um admin em Equipe para liberar vaga.")
-                                            .font(AWTheme.caption(12))
-                                            .foregroundStyle(AWTheme.textSecondary)
-                                    }
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .padding(.top, 4)
-                                }
-                            } else if isBootstrapAdmin {
-                                HStack(spacing: 8) {
-                                    Image(systemName: "shield.checkered")
-                                        .foregroundStyle(AWTheme.warning)
-                                    Text("Esta será a conta Administradora deste dispositivo.")
-                                        .font(AWTheme.caption(12))
-                                        .foregroundStyle(AWTheme.textSecondary)
-                                }
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                            } else {
-                                Text("Novas contas são criadas como Operador. Um administrador pode elevar o acesso em Equipe (máx. \(SessionManager.maxAdmins) admins).")
-                                    .font(AWTheme.caption(12))
-                                    .foregroundStyle(AWTheme.textSecondary)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                            }
                         }
                     }
                     
@@ -167,9 +154,84 @@ struct AutoWiseCadastro: View {
             Text(alertMessage)
         }
         .onAppear {
-            if !canAssignAdmin || !hasAdminSlot {
-                isAdmin = false
+            syncDefaultRole()
+        }
+        .onChange(of: hasAdminSlot) { _, _ in
+            syncDefaultRole()
+        }
+    }
+    
+    private func profileOption(_ role: UserRole) -> some View {
+        let isSelected = selectedRole == role
+        let adminBlocked = role == .admin && canAssignAdmin && !hasAdminSlot && !isBootstrapAdmin
+        let tint = color(for: role)
+        
+        return Button {
+            guard !adminBlocked else { return }
+            selectedRole = role
+        } label: {
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: role.systemImage)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(isSelected ? .white : tint)
+                    .frame(width: 36, height: 36)
+                    .background((isSelected ? tint : tint.opacity(0.14)))
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Text(role.titulo)
+                            .font(AWTheme.headline(15))
+                            .foregroundStyle(AWTheme.textPrimary)
+                        Spacer()
+                        if isSelected {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(tint)
+                        }
+                    }
+                    Text(role.descricao)
+                        .font(AWTheme.caption(12))
+                        .foregroundStyle(AWTheme.textSecondary)
+                        .multilineTextAlignment(.leading)
+                    
+                    if role == .admin && canAssignAdmin {
+                        Text("Vagas: \(SessionManager.adminSlotsRemaining(context: context)) de \(SessionManager.maxAdmins)")
+                            .font(AWTheme.caption(11))
+                            .foregroundStyle(adminBlocked ? AWTheme.warning : AWTheme.textSecondary)
+                    }
+                }
             }
+            .padding(12)
+            .background(isSelected ? tint.opacity(0.12) : AWTheme.fieldFill)
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(isSelected ? tint : AWTheme.stroke, lineWidth: isSelected ? 1.5 : 1)
+            )
+            .opacity(adminBlocked ? 0.45 : 1)
+        }
+        .buttonStyle(.plain)
+        .disabled(adminBlocked)
+    }
+    
+    private func color(for role: UserRole) -> Color {
+        switch role {
+        case .admin: return AWTheme.warning
+        case .operador: return AWTheme.moduleEntrega
+        case .funcionario: return AWTheme.moduleHistorico
+        }
+    }
+    
+    private func syncDefaultRole() {
+        if isBootstrapAdmin {
+            selectedRole = .admin
+            return
+        }
+        if selectedRole == .admin && (!canAssignAdmin || !hasAdminSlot) {
+            selectedRole = .operador
+        }
+        if !availableRoles.contains(selectedRole) {
+            selectedRole = availableRoles.first ?? .operador
         }
     }
     
@@ -188,19 +250,25 @@ struct AutoWiseCadastro: View {
             return
         }
         
-        let wantsAdmin = canAssignAdmin && isAdmin && hasAdminSlot
-        if canAssignAdmin && isAdmin && !hasAdminSlot {
-            shouldReturnToLogin = false
-            alertMessage = "Limite de \(SessionManager.maxAdmins) administradores atingido. Cadastre um operador ou libere uma vaga em Equipe."
-            showAlert = true
-            return
+        var role = selectedRole
+        if isBootstrapAdmin {
+            role = .admin
         }
         
-        let role: UserRole = {
-            if wantsAdmin { return .admin }
-            if isBootstrapAdmin { return .admin }
-            return .normal
-        }()
+        if role == .admin && !isBootstrapAdmin {
+            guard canAssignAdmin else {
+                shouldReturnToLogin = false
+                alertMessage = "Somente administradores podem cadastrar outro administrador."
+                showAlert = true
+                return
+            }
+            guard hasAdminSlot else {
+                shouldReturnToLogin = false
+                alertMessage = "Limite de \(SessionManager.maxAdmins) administradores atingido. Cadastre Operador ou Funcionário, ou libere uma vaga em Equipe."
+                showAlert = true
+                return
+            }
+        }
         
         Task {
             AuthService.shared.configureIfNeeded()
@@ -214,12 +282,9 @@ struct AutoWiseCadastro: View {
                     context: context
                 )
                 shouldReturnToLogin = !session.isLoggedIn
-                alertMessage = role == .admin
-                    ? "Funcionário administrador cadastrado (\(SessionManager.adminCount(context: context))/\(SessionManager.maxAdmins)). Já disponível em Funcionário responsável."
-                    : "Funcionário cadastrado com sucesso. Já disponível em Funcionário responsável."
+                alertMessage = successMessage(for: role)
                 showAlert = true
                 clearForm()
-                isAdmin = false
             } catch let authError as AuthServiceError {
                 shouldReturnToLogin = false
                 alertMessage = authError.localizedDescription
@@ -237,12 +302,9 @@ struct AutoWiseCadastro: View {
                 switch result {
                 case .success:
                     shouldReturnToLogin = !session.isLoggedIn
-                    alertMessage = role == .admin
-                        ? "Funcionário administrador cadastrado (\(SessionManager.adminCount(context: context))/\(SessionManager.maxAdmins)). Já disponível em Funcionário responsável."
-                        : "Funcionário cadastrado com sucesso. Já disponível em Funcionário responsável."
+                    alertMessage = successMessage(for: role)
                     showAlert = true
                     clearForm()
-                    isAdmin = false
                 case .failure(let cadastroError):
                     shouldReturnToLogin = false
                     switch cadastroError {
@@ -253,7 +315,7 @@ struct AutoWiseCadastro: View {
                     case .emailDuplicado:
                         alertMessage = "E-mail já cadastrado."
                     case .limiteAdmins:
-                        alertMessage = "Limite de \(SessionManager.maxAdmins) administradores atingido. Cadastre um operador ou libere uma vaga em Equipe."
+                        alertMessage = "Limite de \(SessionManager.maxAdmins) administradores atingido. Cadastre Operador ou Funcionário, ou libere uma vaga em Equipe."
                     case .erroSalvar:
                         alertMessage = error.localizedDescription
                     }
@@ -263,12 +325,24 @@ struct AutoWiseCadastro: View {
         }
     }
     
+    private func successMessage(for role: UserRole) -> String {
+        switch role {
+        case .admin:
+            return "Administrador cadastrado (\(SessionManager.adminCount(context: context))/\(SessionManager.maxAdmins)). Já disponível nas operações."
+        case .operador:
+            return "Operador cadastrado com sucesso. Já disponível em Funcionário responsável."
+        case .funcionario:
+            return "Funcionário cadastrado com sucesso. Já disponível em Funcionário responsável."
+        }
+    }
+    
     private func clearForm() {
         name = ""
         email = ""
         phone = ""
         password = ""
         confirmPassword = ""
+        syncDefaultRole()
     }
     
     private func isValidEmail(_ email: String) -> Bool {

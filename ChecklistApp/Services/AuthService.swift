@@ -534,7 +534,7 @@ final class AuthService: ObservableObject {
             if email.caseInsensitiveCompare(AppStoreLinks.DemoAccount.email) == .orderedSame {
                 return .admin
             }
-            return .normal
+            return .operador
         }()
         
         return try upsertSocialLocalUser(
@@ -553,7 +553,7 @@ final class AuthService: ObservableObject {
         email: String,
         name: String,
         phone: String = "",
-        role: UserRole = .normal,
+        role: UserRole = .operador,
         password: String = "oauth",
         provider: String,
         context: ModelContext
@@ -562,7 +562,7 @@ final class AuthService: ObservableObject {
             existing.name = name
             if !phone.isEmpty { existing.phone = phone }
             // Não rebaixa admin existente no login social/Firebase
-            if existing.role == .normal, role == .admin {
+            if existing.role != .admin, role == .admin {
                 if SessionManager.canAddAdmin(context: context) {
                     existing.role = .admin
                 }

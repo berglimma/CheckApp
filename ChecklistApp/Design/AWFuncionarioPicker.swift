@@ -147,7 +147,7 @@ struct AWFuncionarioPicker: View {
             funcionario = user.name
         } label: {
             HStack(spacing: 6) {
-                Image(systemName: user.role == .admin ? "shield.fill" : "person.fill")
+                Image(systemName: user.role.systemImage)
                     .font(.system(size: 10, weight: .semibold))
                 Text(user.name)
                     .font(AWTheme.caption(12))

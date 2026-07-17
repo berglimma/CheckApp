@@ -208,7 +208,7 @@ private enum LegalCopy {
         ),
         .init(
             title: "3. Contas e perfis",
-            body: "Existem perfis de Administrador e Operador. Você é responsável por manter a confidencialidade das credenciais. Contas administrativas só podem ser criadas ou elevadas por administradores já autenticados, respeitado o limite de 5 administradores."
+            body: "Existem perfis de Administrador, Operador e Funcionário. Você é responsável por manter a confidencialidade das credenciais. Contas administrativas só podem ser criadas ou elevadas por administradores já autenticados, respeitado o limite de 5 administradores."
         ),
         .init(
             title: "4. Conteúdo operacional",
@@ -241,7 +241,7 @@ private enum LegalCopy {
             title: "Assuntos frequentes",
             body: """
             • Login, recuperação de senha e Sign in with Apple/Google
-            • Perfis Administrador e Operador
+            • Perfis Administrador, Operador e Funcionário
             • Exclusão de conta e dados (LGPD)
             • Checklists, reservas e avisos por SMS/iMessage e e-mail
             • Relatórios e histórico em PDF

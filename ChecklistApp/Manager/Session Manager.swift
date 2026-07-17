@@ -23,7 +23,7 @@ final class SessionManager: ObservableObject {
     }
     
     var roleTitle: String {
-        currentUser?.role.titulo ?? UserRole.normal.titulo
+        currentUser?.role.titulo ?? UserRole.operador.titulo
     }
     
     /// Limite máximo de contas administradoras.
@@ -61,13 +61,13 @@ final class SessionManager: ObservableObject {
             return .success
         }
         
-        if user.role == .admin && role == .normal {
+        if user.role == .admin && role != .admin {
             if Self.adminCount(context: context) <= 1 {
                 return .lastAdmin
             }
         }
         
-        if user.role == .normal && role == .admin {
+        if user.role != .admin && role == .admin {
             if !Self.canAddAdmin(context: context) {
                 return .maxAdminsReached
             }

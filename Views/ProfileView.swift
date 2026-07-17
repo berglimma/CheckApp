@@ -50,7 +50,7 @@ struct ProfileView: View {
                                     )
                                 }
                                 
-                                Text(session.currentUser?.role.descricao ?? UserRole.normal.descricao)
+                                Text(session.currentUser?.role.descricao ?? UserRole.operador.descricao)
                                     .font(AWTheme.caption(12))
                                     .foregroundStyle(AWTheme.textSecondary)
                                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -82,7 +82,7 @@ struct ProfileView: View {
                                     NavigationLink {
                                         AutoWiseCadastro()
                                     } label: {
-                                        legalRow(title: "Cadastrar funcionário", systemImage: "person.badge.plus")
+                                        legalRow(title: "Cadastrar usuário", systemImage: "person.badge.plus")
                                     }
                                     .buttonStyle(.plain)
                                 }

@@ -18,11 +18,11 @@ final class User {
     var phone: String = ""
     var password: String = ""
     var createdAt: Date = Date()
-    var roleRaw: String = UserRole.normal.rawValue
+    var roleRaw: String = UserRole.operador.rawValue
     var photoOwnerId: String = ""
     
     var role: UserRole {
-        get { UserRole(rawValue: roleRaw) ?? .normal }
+        get { UserRole.fromStorage(roleRaw) }
         set { roleRaw = newValue.rawValue }
     }
     
@@ -41,24 +41,47 @@ final class User {
     }
 }
 
-enum UserRole: String, Codable, CaseIterable {
+enum UserRole: String, Codable, CaseIterable, Identifiable {
     case admin
-    case normal
+    case operador
+    case funcionario
+    
+    var id: String { rawValue }
+    
+    /// Perfis selecionáveis no cadastro (exceto bootstrap forçado).
+    static var cadastroCases: [UserRole] { [.operador, .funcionario, .admin] }
     
     var titulo: String {
         switch self {
         case .admin: return "Administrador"
-        case .normal: return "Operador"
+        case .operador: return "Operador"
+        case .funcionario: return "Funcionário"
         }
     }
     
     var descricao: String {
         switch self {
         case .admin:
-            return "Gerencia usuários e acessos da equipe"
-        case .normal:
-            return "Registra checklists e operações de frota"
+            return "Gerencia equipe, cadastros e acessos do Auto Wize"
+        case .operador:
+            return "Executa checklists e operações de frota no aplicativo"
+        case .funcionario:
+            return "Aparece como responsável nas operações e pode registrar checklists"
         }
+    }
+    
+    var systemImage: String {
+        switch self {
+        case .admin: return "shield.checkered"
+        case .operador: return "wrench.and.screwdriver.fill"
+        case .funcionario: return "person.fill"
+        }
+    }
+    
+    /// Compatível com contas antigas salvas como `normal`.
+    static func fromStorage(_ raw: String) -> UserRole {
+        if raw == "normal" { return .operador }
+        return UserRole(rawValue: raw) ?? .operador
     }
 }
 

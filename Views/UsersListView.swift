@@ -25,6 +25,12 @@ struct UsersListView: View {
         adminCount < SessionManager.maxAdmins
     }
     
+    private var roleSummary: String {
+        let operadores = users.filter { $0.role == .operador }.count
+        let funcionarios = users.filter { $0.role == .funcionario }.count
+        return "Operadores \(operadores) · Funcionários \(funcionarios) · Admins \(adminCount)/\(SessionManager.maxAdmins)"
+    }
+    
     var body: some View {
         ZStack {
             AWScreenBackground()
@@ -38,23 +44,23 @@ struct UsersListView: View {
             } else if users.isEmpty {
                 AWEmptyState(
                     systemImage: "person.3",
-                    title: "Nenhum funcionário",
-                    message: "Cadastre funcionários em Cadastro de Funcionário para usá-los nas operações."
+                    title: "Nenhum usuário",
+                    message: "Cadastre Operador, Funcionário ou Administrador para usar nas operações."
                 )
             } else {
                 ScrollView(showsIndicators: false) {
                     LazyVStack(spacing: 10) {
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("Funcionários cadastrados: \(users.count)")
+                            Text("Usuários cadastrados: \(users.count)")
                                 .font(AWTheme.headline(14))
                                 .foregroundStyle(AWTheme.textPrimary)
-                            Text("Administradores: \(adminCount)/\(SessionManager.maxAdmins)")
+                            Text(roleSummary)
                                 .font(AWTheme.caption(12))
-                                .foregroundStyle(AWTheme.warning)
+                                .foregroundStyle(AWTheme.textSecondary)
                             Text(
                                 canPromoteToAdmin
-                                    ? "Com vaga livre você pode promover a Administrador. Sem vaga, cadastre apenas operadores."
-                                    : "Limite atingido. Exclua ou rebaixe um administrador para liberar nova vaga."
+                                    ? "Perfis: Operador, Funcionário e Administrador (máx. \(SessionManager.maxAdmins) admins)."
+                                    : "Limite de administradores atingido. Rebaixe ou exclua um admin para liberar vaga."
                             )
                             .font(AWTheme.caption(12))
                             .foregroundStyle(AWTheme.textSecondary)
@@ -103,8 +109,7 @@ struct UsersListView: View {
     }
     
     private func userRow(_ user: User) -> some View {
-        let isAdminUser = user.role == .admin
-        let badgeColor = isAdminUser ? AWTheme.warning : AWTheme.accent
+        let badgeColor = color(for: user.role)
         let isSelf = session.currentUser?.persistentModelID == user.persistentModelID
         
         return VStack(alignment: .leading, spacing: 12) {
@@ -113,8 +118,8 @@ struct UsersListView: View {
                     Circle()
                         .fill(badgeColor.opacity(0.14))
                         .frame(width: 42, height: 42)
-                    Text(String(user.name.prefix(1)).uppercased())
-                        .font(AWTheme.headline(15))
+                    Image(systemName: user.role.systemImage)
+                        .font(.system(size: 16, weight: .semibold))
                         .foregroundStyle(badgeColor)
                 }
                 
@@ -154,15 +159,24 @@ struct UsersListView: View {
             HStack(spacing: 8) {
                 roleButton(
                     title: "Operador",
-                    selected: user.role == .normal,
-                    color: AWTheme.accent,
+                    selected: user.role == .operador,
+                    color: AWTheme.moduleEntrega,
                     disabled: false
                 ) {
-                    changeRole(user, to: .normal)
+                    changeRole(user, to: .operador)
                 }
                 
                 roleButton(
-                    title: "Administrador",
+                    title: "Funcionário",
+                    selected: user.role == .funcionario,
+                    color: AWTheme.moduleHistorico,
+                    disabled: false
+                ) {
+                    changeRole(user, to: .funcionario)
+                }
+                
+                roleButton(
+                    title: "Admin",
                     selected: user.role == .admin,
                     color: AWTheme.warning,
                     disabled: user.role != .admin && !canPromoteToAdmin
@@ -219,6 +233,14 @@ struct UsersListView: View {
         }
         .buttonStyle(.plain)
         .disabled(selected || disabled)
+    }
+    
+    private func color(for role: UserRole) -> Color {
+        switch role {
+        case .admin: return AWTheme.warning
+        case .operador: return AWTheme.moduleEntrega
+        case .funcionario: return AWTheme.moduleHistorico
+        }
     }
     
     private func changeRole(_ user: User, to role: UserRole) {
