@@ -12,6 +12,7 @@ import UIKit
 @main
 struct ChecklistAppApp: App {
     @StateObject private var session = SessionManager()
+    @State private var isShowingLoginTransition = false
     
     init() {
         AuthService.shared.configureIfNeeded()
@@ -47,20 +48,35 @@ struct ChecklistAppApp: App {
     var body: some Scene {
         WindowGroup {
             Group {
-                if session.isLoggedIn {
-                    HomeCheckListView()
-                        .transition(.opacity)
-                } else {
+                if !session.isLoggedIn {
                     AutoWiseLogin()
+                        .transition(.opacity)
+                } else if isShowingLoginTransition {
+                    LoginTransitionView(duration: 4) {
+                        withAnimation(.easeInOut(duration: 0.35)) {
+                            isShowingLoginTransition = false
+                        }
+                    }
+                    .transition(.opacity)
+                } else {
+                    HomeCheckListView()
                         .transition(.opacity)
                 }
             }
-            .animation(.easeInOut(duration: 0.25), value: session.isLoggedIn)
+            .animation(.easeInOut(duration: 0.3), value: session.isLoggedIn)
+            .animation(.easeInOut(duration: 0.3), value: isShowingLoginTransition)
             .environmentObject(session)
             .preferredColorScheme(.dark)
             .background(AWTheme.screenGray.ignoresSafeArea())
             .tint(AWTheme.accent)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .onChange(of: session.isLoggedIn) { _, loggedIn in
+                if loggedIn {
+                    isShowingLoginTransition = true
+                } else {
+                    isShowingLoginTransition = false
+                }
+            }
             .task {
                 await MainActor.run {
                     Self.configureUIAppearance()
