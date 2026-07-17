@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 struct AWBrandModelPicker: View {
     @Binding var marca: String
@@ -75,11 +76,7 @@ struct AWBrandModelPicker: View {
             if !marca.isEmpty || !modelo.isEmpty {
                 HStack(spacing: 8) {
                     if let brand = selectedBrand {
-                        Image(brand.logoImageName)
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: 28, height: 28)
-                            .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                        brandLogo(brand, size: 28, cornerRadius: 6)
                     } else {
                         Image(systemName: kind == .tractor ? "leaf.fill" : "car.fill")
                             .foregroundStyle(AWTheme.accent)
@@ -125,11 +122,7 @@ struct AWBrandModelPicker: View {
             }
         } label: {
             VStack(spacing: 8) {
-                Image(brand.logoImageName)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: 56, height: 56)
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                brandLogo(brand, size: 56, cornerRadius: 12)
                     .overlay(
                         RoundedRectangle(cornerRadius: 12, style: .continuous)
                             .stroke(
@@ -159,6 +152,26 @@ struct AWBrandModelPicker: View {
         .buttonStyle(.plain)
     }
     
+    @ViewBuilder
+    private func brandLogo(_ brand: VehicleBrand, size: CGFloat, cornerRadius: CGFloat) -> some View {
+        if UIImage(named: brand.logoImageName) != nil {
+            Image(brand.logoImageName)
+                .resizable()
+                .scaledToFill()
+                .frame(width: size, height: size)
+                .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+        } else {
+            ZStack {
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .fill(brand.color.opacity(0.18))
+                Image(systemName: brand.symbol)
+                    .font(.system(size: size * 0.38, weight: .semibold))
+                    .foregroundStyle(brand.color)
+            }
+            .frame(width: size, height: size)
+        }
+    }
+    
     private func modelCard(_ model: VehicleModel, brandColor: Color) -> some View {
         let isSelected = selectedModel?.id == model.id
         return Button {
@@ -177,11 +190,14 @@ struct AWBrandModelPicker: View {
                 Text(model.name)
                     .font(AWTheme.caption(12))
                     .foregroundStyle(AWTheme.textPrimary)
-                    .lineLimit(1)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.center)
+                    .frame(minHeight: 28)
                 
-                Text(model.category.rawValue)
+                Text(modelSubtitle(model))
                     .font(AWTheme.caption(10))
-                    .foregroundStyle(AWTheme.textSecondary)
+                    .foregroundStyle(powertrainColor(model.powertrain))
+                    .lineLimit(1)
             }
             .padding(8)
             .frame(maxWidth: .infinity)
@@ -195,6 +211,21 @@ struct AWBrandModelPicker: View {
             )
         }
         .buttonStyle(.plain)
+    }
+    
+    private func modelSubtitle(_ model: VehicleModel) -> String {
+        if model.powertrain == .combustion {
+            return model.category.rawValue
+        }
+        return "\(model.category.rawValue) · \(model.powertrain.shortLabel)"
+    }
+    
+    private func powertrainColor(_ powertrain: VehiclePowertrain) -> Color {
+        switch powertrain {
+        case .combustion: return AWTheme.textSecondary
+        case .hybrid, .plugInHybrid: return Color(red: 0.15, green: 0.55, blue: 0.35)
+        case .electric: return Color(red: 0.10, green: 0.45, blue: 0.75)
+        }
     }
     
     private func syncSelectionFromBindings() {
