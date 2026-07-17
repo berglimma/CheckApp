@@ -1,3 +1,10 @@
+//
+//  ChecklistApp.swift
+//  ChecklistApp
+//
+//  Created by Berg Limma on 15/06/26.
+//
+
 import SwiftUI
 import SwiftData
 import UIKit
@@ -17,7 +24,8 @@ struct ChecklistAppApp: App {
             Client.self,
             ChecklistDevolucao.self,
             CheckListHistorico.self,
-            PhotoAttachment.self
+            PhotoAttachment.self,
+            Reserva.self
         ])
         
         do {
@@ -56,6 +64,7 @@ struct ChecklistAppApp: App {
             .task {
                 await MainActor.run {
                     Self.configureUIAppearance()
+                    DemoAccountSeeder.seedIfNeeded(context: modelContainer.mainContext)
                 }
             }
             .onOpenURL { url in

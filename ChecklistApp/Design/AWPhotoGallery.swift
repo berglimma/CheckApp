@@ -1,7 +1,15 @@
+//
+//  AWPhotoGallery.swift
+//  ChecklistApp
+//
+//  Created by Berg Limma on 15/06/26.
+//
+
 import SwiftUI
 import PhotosUI
 import SwiftData
 import UIKit
+import AVFoundation
 
 struct AWPhotoGallery: View {
     let ownerId: String
@@ -12,11 +20,22 @@ struct AWPhotoGallery: View {
     @Environment(\.modelContext) private var context
     @State private var photos: [(PhotoAttachment, UIImage)] = []
     @State private var pickerItems: [PhotosPickerItem] = []
-    @State private var showPicker = false
     @State private var replacing: PhotoAttachment?
     @State private var replacePickerItem: PhotosPickerItem?
     @State private var errorMessage: String?
     @State private var showError = false
+    @State private var showSourceMenu = false
+    @State private var showCamera = false
+    @State private var showLibraryPicker = false
+    @State private var cameraMode: CameraMode = .insert
+    
+    private enum CameraMode {
+        case insert
+        case replace
+    }
+    
+    private var canAddMore: Bool { photos.count < maxPhotos }
+    private var cameraAvailable: Bool { UIImagePickerController.isSourceTypeAvailable(.camera) }
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -45,14 +64,47 @@ struct AWPhotoGallery: View {
             }
             
             HStack(spacing: 10) {
-                PhotosPicker(
-                    selection: $pickerItems,
-                    maxSelectionCount: max(1, maxPhotos - photos.count),
-                    matching: .images
-                ) {
-                    labelButton(title: "Inserir", systemImage: "plus.circle.fill", disabled: photos.count >= maxPhotos)
+                Button {
+                    showSourceMenu = true
+                } label: {
+                    labelButton(title: "Inserir", systemImage: "plus.circle.fill", disabled: !canAddMore)
                 }
-                .disabled(photos.count >= maxPhotos)
+                .buttonStyle(.plain)
+                .disabled(!canAddMore)
+                
+                if cameraAvailable {
+                    Button {
+                        cameraMode = .insert
+                        requestCameraAndOpen()
+                    } label: {
+                        labelButton(title: "Câmera", systemImage: "camera.fill", disabled: !canAddMore)
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(!canAddMore)
+                }
+            }
+        }
+        .confirmationDialog("Adicionar foto", isPresented: $showSourceMenu, titleVisibility: .visible) {
+            if cameraAvailable {
+                Button("Tirar foto") {
+                    cameraMode = .insert
+                    requestCameraAndOpen()
+                }
+            }
+            Button("Escolher da galeria") {
+                showLibraryPicker = true
+            }
+            Button("Cancelar", role: .cancel) {}
+        }
+        .photosPicker(
+            isPresented: $showLibraryPicker,
+            selection: $pickerItems,
+            maxSelectionCount: max(1, maxPhotos - photos.count),
+            matching: .images
+        )
+        .fullScreenCover(isPresented: $showCamera) {
+            CameraImagePicker { image in
+                Task { await handleCameraImage(image) }
             }
         }
         .onAppear(perform: reload)
@@ -84,13 +136,26 @@ struct AWPhotoGallery: View {
             
             HStack(spacing: 8) {
                 PhotosPicker(selection: $replacePickerItem, matching: .images) {
-                    Image(systemName: "arrow.triangle.2.circlepath")
+                    Image(systemName: "photo")
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(AWTheme.accentDeep)
                 }
                 .simultaneousGesture(TapGesture().onEnded {
                     replacing = attachment
                 })
+                
+                if cameraAvailable {
+                    Button {
+                        replacing = attachment
+                        cameraMode = .replace
+                        requestCameraAndOpen()
+                    } label: {
+                        Image(systemName: "camera")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(AWTheme.accentDeep)
+                    }
+                    .buttonStyle(.plain)
+                }
                 
                 Button {
                     delete(attachment)
@@ -119,6 +184,50 @@ struct AWPhotoGallery: View {
     
     private func reload() {
         photos = PhotoStore.shared.loadImages(ownerId: ownerId, context: context)
+    }
+    
+    private func requestCameraAndOpen() {
+        switch AVCaptureDevice.authorizationStatus(for: .video) {
+        case .authorized:
+            showCamera = true
+        case .notDetermined:
+            AVCaptureDevice.requestAccess(for: .video) { granted in
+                DispatchQueue.main.async {
+                    if granted {
+                        showCamera = true
+                    } else {
+                        errorMessage = "Permissão da câmera negada. Ative em Ajustes."
+                        showError = true
+                    }
+                }
+            }
+        default:
+            errorMessage = "Permissão da câmera negada. Ative em Ajustes → Auto Wize → Câmera."
+            showError = true
+        }
+    }
+    
+    private func handleCameraImage(_ image: UIImage) async {
+        do {
+            switch cameraMode {
+            case .insert:
+                guard photos.count < maxPhotos else { return }
+                try PhotoStore.shared.insert(
+                    image: image,
+                    ownerId: ownerId,
+                    ownerType: ownerType,
+                    context: context
+                )
+            case .replace:
+                guard let replacing else { return }
+                try PhotoStore.shared.replace(attachment: replacing, with: image, context: context)
+                self.replacing = nil
+            }
+            reload()
+        } catch {
+            errorMessage = error.localizedDescription
+            showError = true
+        }
     }
     
     private func insertPicked(_ items: [PhotosPickerItem]) async {
@@ -166,6 +275,50 @@ struct AWPhotoGallery: View {
         } catch {
             errorMessage = error.localizedDescription
             showError = true
+        }
+    }
+}
+
+// MARK: - Camera picker
+
+struct CameraImagePicker: UIViewControllerRepresentable {
+    var onImage: (UIImage) -> Void
+    @Environment(\.dismiss) private var dismiss
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator(parent: self)
+    }
+    
+    func makeUIViewController(context: Context) -> UIImagePickerController {
+        let picker = UIImagePickerController()
+        picker.sourceType = .camera
+        picker.cameraCaptureMode = .photo
+        picker.allowsEditing = false
+        picker.delegate = context.coordinator
+        return picker
+    }
+    
+    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
+    
+    final class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+        let parent: CameraImagePicker
+        
+        init(parent: CameraImagePicker) {
+            self.parent = parent
+        }
+        
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            parent.dismiss()
+        }
+        
+        func imagePickerController(
+            _ picker: UIImagePickerController,
+            didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]
+        ) {
+            if let image = info[.originalImage] as? UIImage {
+                parent.onImage(image)
+            }
+            parent.dismiss()
         }
     }
 }
@@ -258,7 +411,6 @@ struct AWProfilePhotoPicker: View {
                 attachment = created
             }
             image = uiImage
-            // Notifica o painel via binding onChange no ProfileView
         } catch {
             print(error)
         }

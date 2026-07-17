@@ -22,23 +22,24 @@ final class LoginViewModel {
             errorMessage = "Preencha todos os campos."
             return nil
         }
-        let descriptor = FetchDescriptor<User>(
-            predicate: #Predicate {
-                $0.email == email &&
-                $0.password == password
-            }
-        )
+        
+        let normalizedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
+        let descriptor = FetchDescriptor<User>()
         
         do {
             let users = try context.fetch(descriptor)
-            
-            if let user = users.first {
-                return user
-            } else {
+            guard let user = users.first(where: {
+                $0.email.caseInsensitiveCompare(normalizedEmail) == .orderedSame
+            }), PasswordHasher.verify(password, against: user.password) else {
                 errorMessage = "Usuário ou senha inválidos."
                 return nil
             }
             
+            if PasswordHasher.needsRehash(user.password) {
+                user.password = PasswordHasher.hash(password)
+                try? context.save()
+            }
+            return user
         } catch {
             errorMessage = "Erro ao buscar usuário."
             return nil

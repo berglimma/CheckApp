@@ -1,3 +1,10 @@
+//
+//  HomeCheckListView.swift
+//  ChecklistApp
+//
+//  Created by Berg Limma on 15/06/26.
+//
+
 import SwiftUI
 
 struct HomeCheckListView: View {
@@ -95,23 +102,35 @@ struct HomeCheckListView: View {
                             
                             AWMenuRow(
                                 title: "Meu perfil",
-                                subtitle: "Foto e dados da conta",
+                                subtitle: "Foto, dados e tipo de acesso",
                                 systemImage: "person.crop.circle",
                                 accent: AWTheme.moduleUsuarios,
                                 destination: ProfileView(),
                                 delay: 0.32,
-                                showsDivider: true
+                                showsDivider: session.isAdmin
                             )
                             
-                            AWMenuRow(
-                                title: "Cadastro de Usuários",
-                                subtitle: "Gerenciar acessos da equipe",
-                                systemImage: "person.badge.plus",
-                                accent: AWTheme.moduleUsuarios,
-                                destination: AutoWiseCadastro(),
-                                delay: 0.36,
-                                showsDivider: false
-                            )
+                            if session.isAdmin {
+                                AWMenuRow(
+                                    title: "Cadastro de Usuários",
+                                    subtitle: "Criar operador ou administrador",
+                                    systemImage: "person.badge.plus",
+                                    accent: AWTheme.moduleUsuarios,
+                                    destination: AutoWiseCadastro(),
+                                    delay: 0.36,
+                                    showsDivider: true
+                                )
+                                
+                                AWMenuRow(
+                                    title: "Equipe",
+                                    subtitle: "Listar e alterar perfis de acesso",
+                                    systemImage: "person.3.fill",
+                                    accent: AWTheme.moduleUsuarios,
+                                    destination: UsersListView(),
+                                    delay: 0.4,
+                                    showsDivider: false
+                                )
+                            }
                         }
                         
                         logoutButton
@@ -147,6 +166,10 @@ struct HomeCheckListView: View {
                 Text("Painel de operações")
                     .font(AWTheme.body(14))
                     .foregroundStyle(AWTheme.textSecondary)
+                
+                Text(session.roleTitle)
+                    .font(AWTheme.caption(12))
+                    .foregroundStyle(session.isAdmin ? AWTheme.warning : AWTheme.accent)
             }
             
             Spacer(minLength: 8)

@@ -1,9 +1,16 @@
+//
+//  ChecklistPDFGenerator.swift
+//  ChecklistApp
+//
+//  Created by Berg Limma on 15/06/26.
+//
+
 import UIKit
-import PencilKit
 
 struct ChecklistPDFGenerator {
     
-    static func gerarPDF(checklist viewModel: ChecklistEntregaViewModel, assinatura: PKCanvasView) -> URL? {
+    @MainActor
+    static func gerarPDF(checklist viewModel: ChecklistEntregaViewModel, assinatura: SignaturePadController) -> URL? {
         let checklist = viewModel.checklistEntrega
 
         let pdfMetaData = [
@@ -52,7 +59,7 @@ struct ChecklistPDFGenerator {
                 y += 20
                 draw("Assinatura:", "")
 
-                if let image = SignatureCapture.image(from: assinatura.drawing) {
+                if let image = SignatureCapture.image(from: assinatura) {
                     let rect = CGRect(x: 20, y: y + 10, width: 300, height: 100)
                     UIColor.white.setFill()
                     context.cgContext.fill(rect)

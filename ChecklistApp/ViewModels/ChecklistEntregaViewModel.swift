@@ -1,8 +1,15 @@
+//
+//  ChecklistEntregaViewModel.swift
+//  ChecklistApp
+//
+//  Created by Berg Limma on 15/06/26.
+//
+
 import Foundation
 import Combine
-import PencilKit
 import SwiftData
 
+@MainActor
 class ChecklistEntregaViewModel: ObservableObject {
     
     @Published var checklistEntrega: Checklist
@@ -17,20 +24,18 @@ class ChecklistEntregaViewModel: ObservableObject {
 
     func salvarChecklistEntrega(context: ModelContext? = nil) {
         checklistEntrega.condicaoGeral = condicao.rawValue
-        salvarChecklistPersistencia()
         
         if let context {
-            let historico = CheckListHistorico(
-                nomeCliente: checklistEntrega.cliente ?? checklistEntrega.funcionario,
-                placa: checklistEntrega.placa,
-                data: checklistEntrega.dataRegistro,
-                tipo: "Entrega"
-            )
-            context.insert(historico)
-            try? context.save()
+            ReservaStore.ensureNumero(&checklistEntrega, context: context)
+            salvarChecklistPersistencia()
+            ReservaStore.saveFromChecklist(checklistEntrega, context: context)
+        } else {
+            checklistEntrega.numeroReserva = ReservaEntrega.normalize(checklistEntrega.numeroReserva)
+            salvarChecklistPersistencia()
+            ReservaStore.saveFromChecklist(checklistEntrega)
         }
         
-        print("✅ Checklist de Entrega salvo.")
+        print("✅ Checklist de Entrega salvo. Reserva \(checklistEntrega.numeroReserva).")
     }
 
     private func salvarChecklistPersistencia() {

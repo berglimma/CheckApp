@@ -1,3 +1,10 @@
+//
+//  AvariaCalculatorViewModel.swift
+//  ChecklistApp
+//
+//  Created by Berg Limma on 15/06/26.
+//
+
 import PDFKit
 import SwiftUI
 
@@ -10,14 +17,40 @@ class AvariaCalculatorViewModel: ObservableObject {
     @Published var localDano: String = ""
     
     @Published var cliente: String = ""
+    @Published var telefoneCliente: String = ""
+    @Published var emailCliente: String = ""
     @Published var funcionario: String = ""
     @Published var nomeCarro: String = ""
     @Published var placaCarro: String = ""
     @Published var kmAtual: String = ""
     @Published var observacoes: String = ""
+    @Published var numeroReserva: String = ""
+    @Published var reservaAtrelada: Bool = false
     
     @Published var generatedPDF: Data? = nil
     @Published var errorMessage: String? = nil
+    
+    func applyReserva(_ reserva: ReservaEntrega) {
+        numeroReserva = reserva.numeroReserva
+        reservaAtrelada = true
+        cliente = reserva.cliente
+        telefoneCliente = reserva.telefoneCliente
+        emailCliente = reserva.emailCliente
+        placaCarro = reserva.placa
+        kmAtual = reserva.kmAtual
+        let veiculo = "\(reserva.marca) \(reserva.modelo)".trimmingCharacters(in: .whitespaces)
+        if !veiculo.isEmpty {
+            nomeCarro = veiculo
+        }
+        if funcionario.trimmingCharacters(in: .whitespaces).isEmpty {
+            funcionario = reserva.funcionario
+        }
+    }
+    
+    func clearReserva() {
+        numeroReserva = ""
+        reservaAtrelada = false
+    }
     
     func addAvaria() {
         if let error = validarCampos() {
@@ -81,6 +114,9 @@ class AvariaCalculatorViewModel: ObservableObject {
             }
             
             draw("Relatório de Avarias — Auto Wize", bold: true, size: 18)
+            if !numeroReserva.isEmpty {
+                draw("Reserva: \(numeroReserva)")
+            }
             draw("Cliente: \(cliente.isEmpty ? "-" : cliente)")
             draw("Funcionário: \(funcionario.isEmpty ? "-" : funcionario)")
             draw("Veículo: \(nomeCarro.isEmpty ? "-" : nomeCarro) | Placa: \(placaCarro.isEmpty ? "-" : placaCarro)")

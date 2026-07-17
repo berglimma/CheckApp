@@ -1,3 +1,10 @@
+//
+//  SignatureCapture.swift
+//  ChecklistApp
+//
+//  Created by Berg Limma on 15/06/26.
+//
+
 import UIKit
 import PencilKit
 
@@ -25,6 +32,11 @@ enum SignatureCapture {
             ctx.fill(CGRect(origin: .zero, size: size))
             ink.draw(in: CGRect(origin: .zero, size: size))
         }
+    }
+    
+    static func image(from controller: SignaturePadController) -> UIImage? {
+        guard let image = controller.makeImage() else { return nil }
+        return withWhiteBackground(image)
     }
     
     /// Garante fundo branco mesmo em imagens antigas salvas com transparência convertida em preto.

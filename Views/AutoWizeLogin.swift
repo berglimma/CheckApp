@@ -1,3 +1,10 @@
+//
+//  AutoWizeLogin.swift
+//  ChecklistApp
+//
+//  Created by Berg Limma on 15/06/26.
+//
+
 import SwiftUI
 import SwiftData
 
@@ -5,6 +12,7 @@ struct AutoWiseLogin: View {
     @State private var alertMessage: String = ""
     @State private var showAlert: Bool = false
     @State private var navigateToRegister: Bool = false
+    @State private var navigateToForgotPassword: Bool = false
     @State private var isLoading: Bool = false
     
     @State private var viewModel = LoginViewModel()
@@ -60,6 +68,9 @@ struct AutoWiseLogin: View {
                             .padding(.horizontal, 4)
                             .opacity(showForm ? 1 : 0)
                         
+                        legalFooter
+                            .opacity(showForm ? 1 : 0)
+                        
                         Spacer(minLength: 32)
                     }
                     .awReadableWidth(AWLayout.loginMaxWidth)
@@ -72,6 +83,9 @@ struct AutoWiseLogin: View {
             }
             .navigationDestination(isPresented: $navigateToRegister) {
                 AutoWiseCadastro()
+            }
+            .navigationDestination(isPresented: $navigateToForgotPassword) {
+                EsqueciSenhaView(initialEmail: viewModel.email)
             }
             .onAppear {
                 startEntrance()
@@ -158,6 +172,18 @@ struct AutoWiseLogin: View {
                     .font(AWTheme.caption(12))
                     .foregroundStyle(AWTheme.textSecondary)
                 AWSecureField(placeholder: "••••••••", text: $viewModel.password)
+                
+                Button {
+                    navigateToForgotPassword = true
+                } label: {
+                    Text("Esqueci minha senha")
+                        .font(AWTheme.caption(13))
+                        .foregroundStyle(AWTheme.accent)
+                        .frame(maxWidth: .infinity)
+                        .multilineTextAlignment(.center)
+                }
+                .buttonStyle(.plain)
+                .frame(maxWidth: .infinity, alignment: .center)
             }
             
             AWPrimaryButton(
@@ -182,8 +208,50 @@ struct AutoWiseLogin: View {
         )
     }
     
+    private var legalFooter: some View {
+        HStack(spacing: 12) {
+            NavigationLink {
+                LegalDocumentsView(document: .terms)
+            } label: {
+                Text("Termos")
+                    .font(AWTheme.caption(12))
+                    .foregroundStyle(AWTheme.textSecondary)
+            }
+            .buttonStyle(.plain)
+            
+            Text("·")
+                .foregroundStyle(AWTheme.textSecondary.opacity(0.5))
+            
+            NavigationLink {
+                LegalDocumentsView(document: .privacy)
+            } label: {
+                Text("Privacidade")
+                    .font(AWTheme.caption(12))
+                    .foregroundStyle(AWTheme.textSecondary)
+            }
+            .buttonStyle(.plain)
+            
+            Text("·")
+                .foregroundStyle(AWTheme.textSecondary.opacity(0.5))
+            
+            NavigationLink {
+                LegalDocumentsView(document: .support)
+            } label: {
+                Text("Suporte")
+                    .font(AWTheme.caption(12))
+                    .foregroundStyle(AWTheme.textSecondary)
+            }
+            .buttonStyle(.plain)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 8)
+    }
+    
     private func performLogin() async {
         isLoading = true
+        defer { isLoading = false }
+        
+        AuthService.shared.configureIfNeeded()
         do {
             let user = try await AuthService.shared.loginEmail(
                 email: viewModel.email,
@@ -192,15 +260,9 @@ struct AutoWiseLogin: View {
             )
             session.currentUser = user
         } catch {
-            // fallback viewModel local
-            if let user = viewModel.login(context: context) {
-                session.currentUser = user
-            } else {
-                alertMessage = error.localizedDescription
-                showAlert = true
-            }
+            alertMessage = error.localizedDescription
+            showAlert = true
         }
-        isLoading = false
     }
     
     private func startEntrance() {

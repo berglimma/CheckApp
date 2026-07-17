@@ -1,5 +1,12 @@
+//
+//  AWComponents.swift
+//  ChecklistApp
+//
+//  Created by Berg Limma on 15/06/26.
+//
+
 import SwiftUI
-import PencilKit
+import UIKit
 
 // MARK: - Screen Background
 
@@ -149,12 +156,82 @@ struct AWSectionCard<Content: View>: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(AWTheme.cardFill)
-        .clipShape(RoundedRectangle(cornerRadius: AWTheme.radiusL, style: .continuous))
+        // Fundo arredondado sem clipShape no content — clipShape bloqueia toques em UIViewRepresentable (assinatura).
+        .background(
+            RoundedRectangle(cornerRadius: AWTheme.radiusL, style: .continuous)
+                .fill(AWTheme.cardFill)
+        )
         .overlay(
             RoundedRectangle(cornerRadius: AWTheme.radiusL, style: .continuous)
                 .stroke(AWTheme.stroke, lineWidth: 1)
         )
+    }
+}
+
+// MARK: - Reserva list (scroll interno sem afetar o formulário)
+
+/// Lista de reservas; com mais de `visibleCount` itens, usa card com scroll próprio.
+struct AWReservaListCard<Row: View>: View {
+    let reservas: [ReservaEntrega]
+    var visibleCount: Int = 4
+    /// Altura aproximada de cada linha (conteúdo + espaçamento).
+    var rowHeight: CGFloat = 92
+    @ViewBuilder var row: (ReservaEntrega) -> Row
+    
+    private var needsInnerScroll: Bool {
+        reservas.count > visibleCount
+    }
+    
+    private var listHeight: CGFloat {
+        let gaps = CGFloat(max(visibleCount - 1, 0)) * 8
+        return CGFloat(visibleCount) * rowHeight + gaps
+    }
+    
+    var body: some View {
+        Group {
+            if needsInnerScroll {
+                ScrollView(.vertical, showsIndicators: true) {
+                    LazyVStack(spacing: 8) {
+                        ForEach(reservas) { reserva in
+                            row(reserva)
+                        }
+                    }
+                    .padding(.vertical, 2)
+                    .padding(.bottom, 28)
+                }
+                .frame(height: listHeight)
+                .scrollBounceBehavior(.basedOnSize)
+            } else {
+                VStack(spacing: 8) {
+                    ForEach(reservas) { reserva in
+                        row(reserva)
+                    }
+                }
+            }
+        }
+        .padding(10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: AWTheme.radiusM, style: .continuous)
+                .fill(AWTheme.fieldFill.opacity(0.55))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: AWTheme.radiusM, style: .continuous)
+                .stroke(AWTheme.stroke, lineWidth: 1)
+        )
+        .overlay(alignment: .bottomTrailing) {
+            if needsInnerScroll {
+                Text("Deslize para ver mais (\(reservas.count))")
+                    .font(AWTheme.caption(10))
+                    .foregroundStyle(AWTheme.textSecondary)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(AWTheme.cardFill.opacity(0.92))
+                    .clipShape(Capsule())
+                    .padding(8)
+                    .allowsHitTesting(false)
+            }
+        }
     }
 }
 
@@ -354,8 +431,8 @@ struct AWFuelSlider: View {
 // MARK: - Signature Pad
 
 struct AWSignaturePad: View {
-    @Binding var canvasView: PKCanvasView
-    var onClear: () -> Void
+    @ObservedObject var controller: SignaturePadController
+    var onClear: (() -> Void)? = nil
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -364,19 +441,18 @@ struct AWSignaturePad: View {
                     .font(AWTheme.headline(14))
                     .foregroundStyle(AWTheme.textPrimary)
                 Spacer()
-                Button("Limpar", action: onClear)
-                    .font(AWTheme.caption(12))
-                    .foregroundStyle(AWTheme.danger)
+                Button("Limpar") {
+                    controller.clear()
+                    onClear?()
+                }
+                .font(AWTheme.caption(12))
+                .foregroundStyle(AWTheme.danger)
             }
             
-            CanvasView(canvasView: $canvasView)
-                .frame(height: 130)
-                .background(AWTheme.fieldFill)
-                .clipShape(RoundedRectangle(cornerRadius: AWTheme.radiusM, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: AWTheme.radiusM, style: .continuous)
-                        .stroke(AWTheme.stroke, lineWidth: 1)
-                )
+            // UIKit puro — sem PencilKit/clipShape SwiftUI (bloqueavam o toque no ScrollView).
+            CanvasView(controller: controller)
+                .frame(height: 180)
+                .contentShape(Rectangle())
         }
     }
 }

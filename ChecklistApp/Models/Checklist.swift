@@ -1,3 +1,10 @@
+//
+//  Checklist.swift
+//  ChecklistApp
+//
+//  Created by Berg Limma on 15/06/26.
+//
+
 import Foundation
 import UIKit
 
@@ -11,6 +18,8 @@ struct Checklist: Identifiable, Codable {
     var cliente: String?
     var documentoCliente: String
     var telefoneCliente: String
+    var emailCliente: String
+    var numeroReserva: String
     var dataRegistro: Date
     var horaRegistro: String
     var funcionario: String
@@ -29,6 +38,8 @@ struct Checklist: Identifiable, Codable {
         cliente: String? = nil,
         documentoCliente: String = "",
         telefoneCliente: String = "",
+        emailCliente: String = "",
+        numeroReserva: String = "",
         dataRegistro: Date = Date(),
         horaRegistro: String = "",
         funcionario: String = "",
@@ -46,6 +57,8 @@ struct Checklist: Identifiable, Codable {
         self.cliente = cliente
         self.documentoCliente = documentoCliente
         self.telefoneCliente = telefoneCliente
+        self.emailCliente = emailCliente
+        self.numeroReserva = numeroReserva
         self.dataRegistro = dataRegistro
         self.horaRegistro = horaRegistro
         self.funcionario = funcionario
@@ -62,7 +75,7 @@ struct Checklist: Identifiable, Codable {
     }
 
     enum CodingKeys: String, CodingKey {
-        case id, cliente, documentoCliente, telefoneCliente
+        case id, cliente, documentoCliente, telefoneCliente, emailCliente, numeroReserva
         case dataRegistro, horaRegistro, funcionario
         case placa, marca, modelo, cor, kmAtual
         case combustivel, condicaoGeral, itensInspecao
@@ -75,6 +88,8 @@ struct Checklist: Identifiable, Codable {
         try container.encodeIfPresent(cliente, forKey: .cliente)
         try container.encode(documentoCliente, forKey: .documentoCliente)
         try container.encode(telefoneCliente, forKey: .telefoneCliente)
+        try container.encode(emailCliente, forKey: .emailCliente)
+        try container.encode(numeroReserva, forKey: .numeroReserva)
         try container.encode(dataRegistro, forKey: .dataRegistro)
         try container.encode(horaRegistro, forKey: .horaRegistro)
         try container.encode(funcionario, forKey: .funcionario)
@@ -98,6 +113,8 @@ struct Checklist: Identifiable, Codable {
         cliente = try container.decodeIfPresent(String.self, forKey: .cliente)
         documentoCliente = try container.decodeIfPresent(String.self, forKey: .documentoCliente) ?? ""
         telefoneCliente = try container.decodeIfPresent(String.self, forKey: .telefoneCliente) ?? ""
+        emailCliente = try container.decodeIfPresent(String.self, forKey: .emailCliente) ?? ""
+        numeroReserva = try container.decodeIfPresent(String.self, forKey: .numeroReserva) ?? ""
         dataRegistro = try container.decode(Date.self, forKey: .dataRegistro)
         horaRegistro = try container.decode(String.self, forKey: .horaRegistro)
         funcionario = try container.decode(String.self, forKey: .funcionario)

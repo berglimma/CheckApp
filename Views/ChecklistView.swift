@@ -1,5 +1,11 @@
+//
+//  ChecklistView.swift
+//  ChecklistApp
+//
+//  Created by Berg Limma on 15/06/26.
+//
+
 import SwiftUI
-import PencilKit
 import SwiftData
 
 struct ChecklistView: View {
@@ -7,8 +13,9 @@ struct ChecklistView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var context
     
-    @State private var canvasView = PKCanvasView()
+    @StateObject private var signaturePad = SignaturePadController()
     @State private var activeAlert: AlertType?
+    @State private var notifyPayload: MessageComposePayload?
     
     enum AlertType: Identifiable {
         case saveSuccess, validationError
@@ -42,7 +49,7 @@ struct ChecklistView: View {
                         subtitle: "Documente a saída do veículo"
                     )
                     
-                    AWSectionCard(title: "Cliente") {
+                    AWSectionCard(title: "Cliente e reserva") {
                         VStack(spacing: 12) {
                             AWTextField(
                                 placeholder: "Nome do cliente",
@@ -51,6 +58,58 @@ struct ChecklistView: View {
                                     set: { viewModel.checklistEntrega.cliente = $0 }
                                 )
                             )
+                            
+                            VStack(alignment: .leading, spacing: 6) {
+                                HStack {
+                                    Text("Nº da reserva")
+                                        .font(AWTheme.caption(12))
+                                        .foregroundStyle(AWTheme.textSecondary)
+                                    Spacer()
+                                    Text("Gerado automaticamente")
+                                        .font(AWTheme.caption(11))
+                                        .foregroundStyle(AWTheme.success)
+                                }
+                                
+                                HStack(spacing: 10) {
+                                    Text(viewModel.checklistEntrega.numeroReserva.isEmpty
+                                         ? "—"
+                                         : viewModel.checklistEntrega.numeroReserva)
+                                        .font(AWTheme.headline(16))
+                                        .foregroundStyle(AWTheme.textPrimary)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .padding(.horizontal, 12)
+                                        .frame(height: AWTheme.fieldHeight)
+                                        .background(AWTheme.fieldFill)
+                                        .clipShape(RoundedRectangle(cornerRadius: AWTheme.radiusM, style: .continuous))
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: AWTheme.radiusM, style: .continuous)
+                                                .stroke(AWTheme.stroke, lineWidth: 1)
+                                        )
+                                    
+                                    Button {
+                                        viewModel.checklistEntrega.numeroReserva =
+                                            ReservaStore.generateNumero(context: context)
+                                    } label: {
+                                        Image(systemName: "arrow.clockwise")
+                                            .font(.system(size: 15, weight: .semibold))
+                                            .foregroundStyle(AWTheme.accent)
+                                            .frame(width: 44, height: AWTheme.fieldHeight)
+                                            .background(AWTheme.fieldFill)
+                                            .clipShape(RoundedRectangle(cornerRadius: AWTheme.radiusM, style: .continuous))
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: AWTheme.radiusM, style: .continuous)
+                                                    .stroke(AWTheme.stroke, lineWidth: 1)
+                                            )
+                                    }
+                                    .buttonStyle(.plain)
+                                    .accessibilityLabel("Gerar novo número de reserva")
+                                }
+                                
+                                Text("Este número fica no banco e integra devolução, troca e manutenção.")
+                                    .font(AWTheme.caption(11))
+                                    .foregroundStyle(AWTheme.textSecondary)
+                            }
+                            
                             AWTextField(
                                 placeholder: "CPF / Documento",
                                 text: $viewModel.checklistEntrega.documentoCliente,
@@ -58,11 +117,21 @@ struct ChecklistView: View {
                                 autocapitalization: .never
                             )
                             AWTextField(
-                                placeholder: "Telefone",
+                                placeholder: "Telefone (SMS / iMessage)",
                                 text: $viewModel.checklistEntrega.telefoneCliente,
                                 keyboard: .phonePad,
                                 autocapitalization: .never
                             )
+                            AWTextField(
+                                placeholder: "E-mail do cliente",
+                                text: $viewModel.checklistEntrega.emailCliente,
+                                keyboard: .emailAddress,
+                                autocapitalization: .never
+                            )
+                            Text("Avisos da reserva serão enviados ao telefone e e-mail.")
+                                .font(AWTheme.caption(11))
+                                .foregroundStyle(AWTheme.textSecondary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
                         }
                     }
                     
@@ -73,8 +142,11 @@ struct ChecklistView: View {
                                 text: $viewModel.checklistEntrega.placa,
                                 autocapitalization: .characters
                             )
-                            AWTextField(placeholder: "Marca", text: $viewModel.checklistEntrega.marca)
-                            AWTextField(placeholder: "Modelo", text: $viewModel.checklistEntrega.modelo)
+                            AWBrandModelPicker(
+                                marca: $viewModel.checklistEntrega.marca,
+                                modelo: $viewModel.checklistEntrega.modelo,
+                                kind: .car
+                            )
                             AWTextField(placeholder: "Cor", text: $viewModel.checklistEntrega.cor)
                             AWTextField(
                                 placeholder: "KM atual",
@@ -135,7 +207,7 @@ struct ChecklistView: View {
                     }
                     
                     AWSectionCard {
-                        AWSignaturePad(canvasView: $canvasView, onClear: clearCanvas)
+                        AWSignaturePad(controller: signaturePad)
                     }
                     
                     VStack(spacing: 10) {
@@ -155,11 +227,33 @@ struct ChecklistView: View {
             case .saveSuccess:
                 return Alert(
                     title: Text("Sucesso"),
-                    message: Text("Checklist de entrega salvo. Você pode exportar o PDF em Histórico ou Relatórios."),
-                    dismissButton: .default(Text("OK")) { dismiss() }
+                    message: Text("Reserva aberta. Em seguida você pode enviar o aviso por SMS/iMessage e e-mail."),
+                    dismissButton: .default(Text("OK")) {
+                        let c = viewModel.checklistEntrega
+                        notifyPayload = MessageNotifyService.payloadReservaAberta(
+                            numero: c.numeroReserva,
+                            cliente: c.cliente ?? "",
+                            telefone: c.telefoneCliente,
+                            email: c.emailCliente,
+                            placa: c.placa,
+                            marca: c.marca,
+                            modelo: c.modelo
+                        )
+                    }
                 )
             case .validationError:
                 return Alert(title: Text("Atenção"), message: Text("Preencha cliente, placa, modelo, KM, funcionário e hora."), dismissButton: .default(Text("OK")))
+            }
+        }
+        .sheet(item: $notifyPayload) { payload in
+            NotifyComposeSheet(payload: payload) {
+                notifyPayload = nil
+                dismiss()
+            }
+        }
+        .onAppear {
+            if viewModel.checklistEntrega.numeroReserva.trimmingCharacters(in: .whitespaces).isEmpty {
+                viewModel.checklistEntrega.numeroReserva = ReservaStore.generateNumero(context: context)
             }
         }
     }
@@ -169,10 +263,10 @@ struct ChecklistView: View {
             activeAlert = .validationError
             return
         }
-        viewModel.salvarChecklistEntrega(context: nil)
+        viewModel.salvarChecklistEntrega(context: context)
         
         let c = viewModel.checklistEntrega
-        let signatureImage = SignatureCapture.image(from: canvasView.drawing)
+        let signatureImage = SignatureCapture.image(from: signaturePad)
         
         var snapshot = ReportSnapshot(
             id: c.id,
@@ -184,8 +278,11 @@ struct ChecklistView: View {
             dataRegistro: c.dataRegistro,
             horaRegistro: c.horaRegistro,
             campos: [
+                "Nº Reserva": c.numeroReserva,
+                "Status reserva": "Ativa",
                 "Documento": c.documentoCliente,
                 "Telefone": c.telefoneCliente,
+                "E-mail": c.emailCliente,
                 "Marca": c.marca,
                 "Modelo": c.modelo,
                 "Cor": c.cor,
@@ -200,10 +297,6 @@ struct ChecklistView: View {
         snapshot.attachSignature(signatureImage)
         ReportRepository.save(context: context, snapshot: snapshot)
         activeAlert = .saveSuccess
-    }
-    
-    private func clearCanvas() {
-        canvasView.drawing = PKDrawing()
     }
 }
 

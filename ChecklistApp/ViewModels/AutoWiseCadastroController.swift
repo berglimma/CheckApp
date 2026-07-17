@@ -1,6 +1,14 @@
+//
+//  AutoWiseCadastroController.swift
+//  ChecklistApp
+//
+//  Created by Berg Limma on 15/06/26.
+//
+
 import SwiftData
 import Foundation
 
+@MainActor
 final class AutoWiseCadastroController {
     
     func saveUser(
@@ -33,12 +41,17 @@ final class AutoWiseCadastroController {
             return .failure(.emailDuplicado)
         }
         
+        let finalRole = role
+        if finalRole == .admin && !SessionManager.canAddAdmin(context: context) {
+            return .failure(.limiteAdmins)
+        }
+        
         let user = User(
             name: name,
             email: email,
             phone: phone,
-            password: password,
-            role: role
+            password: PasswordHasher.hash(password),
+            role: finalRole
         )
         
         context.insert(user)

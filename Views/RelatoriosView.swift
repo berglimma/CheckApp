@@ -1,3 +1,10 @@
+//
+//  RelatoriosView.swift
+//  ChecklistApp
+//
+//  Created by Berg Limma on 15/06/26.
+//
+
 import SwiftUI
 import SwiftData
 import UIKit
@@ -12,6 +19,8 @@ struct RelatoriosView: View {
     @State private var showAlert = false
     @State private var itemToDelete: CheckListHistorico?
     @State private var showDeleteConfirm = false
+    @State private var isUploadingDrive = false
+    @State private var driveLink: URL?
     
     private let filters = ["Todos", "Entrega", "Devolução", "Troca", "Trator", "Avarias"]
     
@@ -25,11 +34,21 @@ struct RelatoriosView: View {
             AWScreenBackground()
             
             if filtered.isEmpty {
-                AWEmptyState(
-                    systemImage: "doc.richtext",
-                    title: "Sem relatórios",
-                    message: "Salve checklists, trocas, avaliações ou avarias para exportar em PDF."
-                )
+                VStack(spacing: 16) {
+                    AWEmptyState(
+                        systemImage: "doc.richtext",
+                        title: "Sem relatórios",
+                        message: "Salve checklists, trocas, avaliações ou avarias para exportar em PDF."
+                    )
+                    
+                    NavigationLink {
+                        DriveRelatoriosView()
+                    } label: {
+                        Label("Buscar no Google Drive", systemImage: "externaldrive.badge.icloud")
+                            .font(AWTheme.headline(15))
+                            .foregroundStyle(AWTheme.moduleHistorico)
+                    }
+                }
             } else {
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 12) {
@@ -66,15 +85,40 @@ struct RelatoriosView: View {
                     .padding(.bottom, 28)
                 }
             }
+            
+            if isUploadingDrive {
+                Color.black.opacity(0.35).ignoresSafeArea()
+                ProgressView("Enviando ao Google Drive…")
+                    .padding(20)
+                    .background(AWTheme.cardFill)
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            }
         }
         .navigationTitle("Relatórios")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(AWTheme.screenGray, for: .navigationBar)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                NavigationLink {
+                    DriveRelatoriosView()
+                } label: {
+                    Label("Drive", systemImage: "externaldrive.badge.icloud")
+                }
+                .accessibilityLabel("Buscar no Google Drive")
+            }
+        }
         .sheet(item: $shareItem) { item in
             PDFShareSheet(url: item.url)
         }
         .alert("Relatório", isPresented: $showAlert) {
-            Button("OK", role: .cancel) {}
+            if let driveLink {
+                Button("Abrir no Drive") {
+                    UIApplication.shared.open(driveLink)
+                }
+            }
+            Button("OK", role: .cancel) {
+                self.driveLink = nil
+            }
         } message: {
             Text(alertMessage)
         }
@@ -139,8 +183,15 @@ struct RelatoriosView: View {
                 .accessibilityLabel("Excluir relatório")
             }
             
-            AWPrimaryButton(title: "Exportar PDF") {
-                export(item)
+            VStack(spacing: 8) {
+                AWPrimaryButton(title: "Exportar PDF") {
+                    export(item)
+                }
+                
+                AWSecondaryButton(title: "Enviar ao Google Drive", tint: AWTheme.moduleHistorico) {
+                    Task { await uploadToDrive(item) }
+                }
+                .disabled(isUploadingDrive)
             }
         }
         .padding(14)
@@ -152,7 +203,7 @@ struct RelatoriosView: View {
         )
     }
     
-    private func export(_ item: CheckListHistorico) {
+    private func makePDFURL(for item: CheckListHistorico) -> URL? {
         let ownerId = item.ownerId.isEmpty ? item.id.uuidString : item.ownerId
         
         let snapshot = item.snapshot ?? ReportSnapshot(
@@ -175,23 +226,69 @@ struct RelatoriosView: View {
             .loadImages(ownerId: snapshot.ownerId, context: context)
             .map(\.1)
         
-        guard let url = ReportPDFService.generate(
+        return ReportPDFService.generate(
             snapshot: snapshot,
             photos: photos,
             signature: snapshot.signatureImage
-        ) else {
+        )
+    }
+    
+    private func export(_ item: CheckListHistorico) {
+        guard let url = makePDFURL(for: item) else {
             alertMessage = "Não foi possível gerar o PDF."
+            driveLink = nil
+            showAlert = true
+            return
+        }
+        shareItem = PDFShareItem(url: url)
+    }
+    
+    private func uploadToDrive(_ item: CheckListHistorico) async {
+        guard let url = makePDFURL(for: item) else {
+            alertMessage = "Não foi possível gerar o PDF."
+            driveLink = nil
             showAlert = true
             return
         }
         
-        shareItem = PDFShareItem(url: url)
+        let stamp = formatFileStamp(item.data)
+        let safeClient = item.nomeCliente
+            .replacingOccurrences(of: " ", with: "_")
+            .replacingOccurrences(of: "/", with: "-")
+        let name = "AutoWize_\(item.tipo)_\(safeClient)_\(stamp).pdf"
+        
+        isUploadingDrive = true
+        defer { isUploadingDrive = false }
+        
+        do {
+            let result = try await GoogleDriveService.uploadPDF(
+                fileURL: url,
+                preferredName: name
+            )
+            driveLink = result.webViewLink
+            alertMessage = "PDF enviado para a pasta “\(GoogleDriveService.folderName)” no Google Drive.\nArquivo: \(result.fileName)"
+            showAlert = true
+        } catch {
+            driveLink = nil
+            if let driveError = error as? GoogleDriveError, case .cancelled = driveError {
+                return
+            }
+            alertMessage = error.localizedDescription
+            showAlert = true
+        }
     }
     
     private func format(_ date: Date) -> String {
         let f = DateFormatter()
         f.locale = Locale(identifier: "pt_BR")
         f.dateFormat = "dd/MM/yyyy HH:mm"
+        return f.string(from: date)
+    }
+    
+    private func formatFileStamp(_ date: Date) -> String {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "yyyyMMdd_HHmm"
         return f.string(from: date)
     }
     
