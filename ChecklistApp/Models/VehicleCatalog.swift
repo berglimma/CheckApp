@@ -208,6 +208,9 @@ enum VehicleCatalog {
             kind: .car,
             models: [
                 .init(name: "Ka", category: .hatch),
+                .init(name: "Ka Sedan", category: .sedan),
+                .init(name: "EcoSport", category: .suv),
+                .init(name: "Fusion", category: .sedan),
                 .init(name: "Territory", category: .suv),
                 .init(name: "Ranger", category: .pickup),
                 .init(name: "Maverick", category: .pickup)
