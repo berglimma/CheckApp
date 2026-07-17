@@ -131,7 +131,10 @@ struct AvariaCalculator: View {
                                 .font(AWTheme.caption(11))
                                 .foregroundStyle(AWTheme.textSecondary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
-                            AWTextField(placeholder: "Funcionário", text: $viewModel.funcionario)
+                            AWFuncionarioPicker(
+                                funcionario: $viewModel.funcionario,
+                                title: "Funcionário responsável"
+                            )
                             AWTextField(placeholder: "Modelo / veículo", text: $viewModel.nomeCarro)
                             AWTextField(
                                 placeholder: "Placa",

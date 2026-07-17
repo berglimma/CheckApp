@@ -38,15 +38,18 @@ struct UsersListView: View {
             } else if users.isEmpty {
                 AWEmptyState(
                     systemImage: "person.3",
-                    title: "Nenhum usuário",
-                    message: "Cadastre colaboradores para liberar o acesso ao Auto Wize."
+                    title: "Nenhum funcionário",
+                    message: "Cadastre funcionários em Cadastro de Funcionário para usá-los nas operações."
                 )
             } else {
                 ScrollView(showsIndicators: false) {
                     LazyVStack(spacing: 10) {
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("Administradores: \(adminCount)/\(SessionManager.maxAdmins)")
+                            Text("Funcionários cadastrados: \(users.count)")
                                 .font(AWTheme.headline(14))
+                                .foregroundStyle(AWTheme.textPrimary)
+                            Text("Administradores: \(adminCount)/\(SessionManager.maxAdmins)")
+                                .font(AWTheme.caption(12))
                                 .foregroundStyle(AWTheme.warning)
                             Text(
                                 canPromoteToAdmin

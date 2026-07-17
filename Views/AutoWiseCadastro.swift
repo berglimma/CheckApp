@@ -56,20 +56,20 @@ struct AutoWiseCadastro: View {
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 14) {
                     AWScreenTitle(
-                        title: "Cadastro de Usuário",
+                        title: "Cadastro de Funcionário",
                         subtitle: canAssignAdmin
                             ? (hasAdminSlot
-                               ? "Administradores \(adminCount)/\(SessionManager.maxAdmins) — ou cadastre operador"
-                               : "Limite de \(SessionManager.maxAdmins) admins — cadastre apenas operadores")
+                               ? "Administradores \(adminCount)/\(SessionManager.maxAdmins) — o nome aparece em Funcionário responsável"
+                               : "Limite de \(SessionManager.maxAdmins) admins — cadastre operadores/funcionários")
                             : (isBootstrapAdmin
                                ? "Primeira conta: será administradora"
-                               : "Crie sua conta de operador")
+                               : "Crie sua conta de operador/funcionário")
                     )
                     
-                    AWSectionCard(title: "Informações pessoais") {
+                    AWSectionCard(title: "Dados do funcionário") {
                         VStack(spacing: 12) {
                             AWTextField(
-                                placeholder: "Nome completo",
+                                placeholder: "Nome do funcionário",
                                 text: $name,
                                 autocapitalization: .words
                             )
@@ -88,8 +88,12 @@ struct AutoWiseCadastro: View {
                         }
                     }
                     
-                    AWSectionCard(title: "Conta e perfil") {
-                        VStack(spacing: 12) {
+                    AWSectionCard(title: "Acesso ao app") {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("O nome do funcionário será listado automaticamente em Entrega, Devolução, Troca, Avarias e Avaliação.")
+                                .font(AWTheme.caption(12))
+                                .foregroundStyle(AWTheme.textSecondary)
+                            
                             AWSecureField(placeholder: "Senha", text: $password)
                             AWSecureField(placeholder: "Confirmar senha", text: $confirmPassword)
                             
@@ -211,9 +215,10 @@ struct AutoWiseCadastro: View {
                 )
                 shouldReturnToLogin = !session.isLoggedIn
                 alertMessage = role == .admin
-                    ? "Conta de administrador criada (\(SessionManager.adminCount(context: context))/\(SessionManager.maxAdmins))."
-                    : "Conta de operador criada com sucesso."
+                    ? "Funcionário administrador cadastrado (\(SessionManager.adminCount(context: context))/\(SessionManager.maxAdmins)). Já disponível em Funcionário responsável."
+                    : "Funcionário cadastrado com sucesso. Já disponível em Funcionário responsável."
                 showAlert = true
+                clearForm()
                 isAdmin = false
             } catch let authError as AuthServiceError {
                 shouldReturnToLogin = false
@@ -233,9 +238,10 @@ struct AutoWiseCadastro: View {
                 case .success:
                     shouldReturnToLogin = !session.isLoggedIn
                     alertMessage = role == .admin
-                        ? "Conta de administrador criada (\(SessionManager.adminCount(context: context))/\(SessionManager.maxAdmins))."
-                        : "Conta de operador criada com sucesso."
+                        ? "Funcionário administrador cadastrado (\(SessionManager.adminCount(context: context))/\(SessionManager.maxAdmins)). Já disponível em Funcionário responsável."
+                        : "Funcionário cadastrado com sucesso. Já disponível em Funcionário responsável."
                     showAlert = true
+                    clearForm()
                     isAdmin = false
                 case .failure(let cadastroError):
                     shouldReturnToLogin = false
@@ -255,6 +261,14 @@ struct AutoWiseCadastro: View {
                 }
             }
         }
+    }
+    
+    private func clearForm() {
+        name = ""
+        email = ""
+        phone = ""
+        password = ""
+        confirmPassword = ""
     }
     
     private func isValidEmail(_ email: String) -> Bool {

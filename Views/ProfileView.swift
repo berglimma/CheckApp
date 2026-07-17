@@ -82,7 +82,7 @@ struct ProfileView: View {
                                     NavigationLink {
                                         AutoWiseCadastro()
                                     } label: {
-                                        legalRow(title: "Cadastrar usuário", systemImage: "person.badge.plus")
+                                        legalRow(title: "Cadastrar funcionário", systemImage: "person.badge.plus")
                                     }
                                     .buttonStyle(.plain)
                                 }

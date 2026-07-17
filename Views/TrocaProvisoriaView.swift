@@ -143,7 +143,10 @@ struct TrocaProvisoriaView: View {
                                 .font(AWTheme.caption(11))
                                 .foregroundStyle(AWTheme.textSecondary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
-                            AWTextField(placeholder: "Funcionário", text: $form.funcionario)
+                            AWFuncionarioPicker(
+                                funcionario: $form.funcionario,
+                                title: "Funcionário responsável"
+                            )
                             AWDateField(title: "Data", date: $form.dataRegistro)
                             AWTextField(
                                 placeholder: "Hora (HH:mm)",

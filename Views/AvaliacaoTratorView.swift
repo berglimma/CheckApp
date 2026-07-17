@@ -65,7 +65,10 @@ struct AvaliacaoTratorView: View {
                                 .font(AWTheme.caption(11))
                                 .foregroundStyle(AWTheme.textSecondary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
-                            AWTextField(placeholder: "Avaliador / funcionário", text: $form.funcionario)
+                            AWFuncionarioPicker(
+                                funcionario: $form.funcionario,
+                                title: "Avaliador / funcionário"
+                            )
                             AWDateField(title: "Data", date: $form.dataRegistro)
                             AWTextField(
                                 placeholder: "Hora (HH:mm)",

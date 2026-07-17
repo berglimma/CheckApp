@@ -166,9 +166,9 @@ struct ChecklistView: View {
                     
                     AWSectionCard(title: "Registro") {
                         VStack(spacing: 12) {
-                            AWTextField(
-                                placeholder: "Funcionário responsável",
-                                text: $viewModel.checklistEntrega.funcionario
+                            AWFuncionarioPicker(
+                                funcionario: $viewModel.checklistEntrega.funcionario,
+                                title: "Funcionário responsável"
                             )
                             AWDateField(title: "Data", date: $viewModel.checklistEntrega.dataRegistro)
                             AWTextField(

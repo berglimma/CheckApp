@@ -112,7 +112,7 @@ struct HomeCheckListView: View {
                             
                             if session.isAdmin {
                                 AWMenuRow(
-                                    title: "Cadastro de Usuários",
+                                    title: "Cadastro de Funcionário",
                                     subtitle: "Criar operador ou administrador",
                                     systemImage: "person.badge.plus",
                                     accent: AWTheme.moduleUsuarios,
