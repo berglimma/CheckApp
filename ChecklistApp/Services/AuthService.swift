@@ -274,6 +274,36 @@ final class AuthService: ObservableObject {
         return .localTemporaryPassword(code: code, phone: user.phone, name: user.name)
     }
     
+    /// Envia e-mail de recuperação de senha (Firebase) ou gera código local.
+    func sendPasswordReset(email: String, context: ModelContext) async throws -> PasswordResetResult {
+        let trimmed = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !trimmed.isEmpty else { throw AuthServiceError.invalidCredentials }
+        
+        #if canImport(FirebaseAuth)
+        if isConfigured {
+            do {
+                try await Auth.auth().sendPasswordReset(withEmail: trimmed)
+                return .firebaseEmailSent
+            } catch {
+                print("Firebase reset falhou: \(error.localizedDescription)")
+            }
+        }
+        #endif
+        
+        let descriptor = FetchDescriptor<User>()
+        let users = try context.fetch(descriptor)
+        guard let user = users.first(where: {
+            $0.email.caseInsensitiveCompare(trimmed) == .orderedSame
+        }) else {
+            throw AuthServiceError.emailNotFound
+        }
+        
+        let code = String(Int.random(in: 100000...999999))
+        user.password = PasswordHasher.hash(code)
+        try context.save()
+        return .localTemporaryPassword(code: code, phone: user.phone, name: user.name)
+    }
+    
     // MARK: - Apple
     
     func prepareAppleNonce() -> String {

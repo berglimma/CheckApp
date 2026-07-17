@@ -36,6 +36,7 @@ struct ChecklistView: View {
             && !c.horaRegistro.trimmingCharacters(in: .whitespaces).isEmpty
             && !c.modelo.trimmingCharacters(in: .whitespaces).isEmpty
             && !c.kmAtual.trimmingCharacters(in: .whitespaces).isEmpty
+            && !c.numeroReserva.trimmingCharacters(in: .whitespaces).isEmpty
     }
     
     var body: some View {
@@ -110,6 +111,12 @@ struct ChecklistView: View {
                                     .foregroundStyle(AWTheme.textSecondary)
                             }
                             
+                            AWTextField(
+                                placeholder: "Nº da reserva",
+                                text: $viewModel.checklistEntrega.numeroReserva,
+                                keyboard: .asciiCapable,
+                                autocapitalization: .characters
+                            )
                             AWTextField(
                                 placeholder: "CPF / Documento",
                                 text: $viewModel.checklistEntrega.documentoCliente,
@@ -242,7 +249,13 @@ struct ChecklistView: View {
                     }
                 )
             case .validationError:
-                return Alert(title: Text("Atenção"), message: Text("Preencha cliente, placa, modelo, KM, funcionário e hora."), dismissButton: .default(Text("OK")))
+                return Alert(title: Text("Atenção"), message: Text("Preencha cliente, nº da reserva, placa, modelo, KM, funcionário e hora."), dismissButton: .default(Text("OK")))
+            }
+        }
+        .sheet(item: $notifyPayload) { payload in
+            NotifyComposeSheet(payload: payload) {
+                notifyPayload = nil
+                dismiss()
             }
         }
         .sheet(item: $notifyPayload) { payload in
