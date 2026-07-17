@@ -1,3 +1,10 @@
+//
+//  Session Manager.swift
+//  ChecklistApp
+//
+//  Created by Berg Limma on 15/06/26.
+//
+
 import SwiftUI
 import SwiftData
 import UIKit
@@ -39,6 +46,17 @@ final class SessionManager: ObservableObject {
     
     func logout() {
         AuthService.shared.logout()
+        currentUser = nil
+        profileImage = nil
+    }
+    
+    /// Exclui a conta do usuário atual e encerra a sessão.
+    func deleteAccount(context: ModelContext) async throws {
+        guard let user = currentUser else {
+            throw AuthServiceError.deleteAccountFailed
+        }
+        
+        try await AuthService.shared.deleteAccount(user: user, context: context)
         currentUser = nil
         profileImage = nil
     }

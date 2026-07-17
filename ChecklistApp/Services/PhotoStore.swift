@@ -1,3 +1,10 @@
+//
+//  PhotoStore.swift
+//  ChecklistApp
+//
+//  Created by Berg Limma on 15/06/26.
+//
+
 import Foundation
 import SwiftData
 import UIKit
@@ -139,6 +146,19 @@ final class PhotoStore {
         }
         let dir = rootURL.appendingPathComponent(ownerId, isDirectory: true)
         try? FileManager.default.removeItem(at: dir)
+    }
+    
+    /// Remove todas as fotos e metadados locais do app.
+    func deleteAllPhotos(context: ModelContext) throws {
+        let attachments = try context.fetch(FetchDescriptor<PhotoAttachment>())
+        for attachment in attachments {
+            let url = fileURL(for: attachment)
+            try? FileManager.default.removeItem(at: url)
+            context.delete(attachment)
+        }
+        try context.save()
+        try? FileManager.default.removeItem(at: rootURL)
+        try? FileManager.default.createDirectory(at: rootURL, withIntermediateDirectories: true)
     }
 }
 

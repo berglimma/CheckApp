@@ -1,3 +1,10 @@
+//
+//  AWComponents.swift
+//  ChecklistApp
+//
+//  Created by Berg Limma on 15/06/26.
+//
+
 import SwiftUI
 import PencilKit
 
@@ -369,14 +376,10 @@ struct AWSignaturePad: View {
                     .foregroundStyle(AWTheme.danger)
             }
             
+            // Sem clipShape/background SwiftUI — eles bloqueiam toques no PKCanvasView.
             CanvasView(canvasView: $canvasView)
-                .frame(height: 130)
-                .background(AWTheme.fieldFill)
-                .clipShape(RoundedRectangle(cornerRadius: AWTheme.radiusM, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: AWTheme.radiusM, style: .continuous)
-                        .stroke(AWTheme.stroke, lineWidth: 1)
-                )
+                .frame(height: 160)
+                .contentShape(Rectangle())
         }
     }
 }

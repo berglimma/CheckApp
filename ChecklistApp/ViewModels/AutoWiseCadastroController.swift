@@ -1,3 +1,10 @@
+//
+//  AutoWiseCadastroController.swift
+//  ChecklistApp
+//
+//  Created by Berg Limma on 15/06/26.
+//
+
 import SwiftData
 import Foundation
 
@@ -37,7 +44,7 @@ final class AutoWiseCadastroController {
             name: name,
             email: email,
             phone: phone,
-            password: password,
+            password: PasswordHasher.hash(password),
             role: role
         )
         

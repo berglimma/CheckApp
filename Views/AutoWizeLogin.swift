@@ -1,3 +1,10 @@
+//
+//  AutoWizeLogin.swift
+//  ChecklistApp
+//
+//  Created by Berg Limma on 15/06/26.
+//
+
 import SwiftUI
 import SwiftData
 
@@ -5,6 +12,7 @@ struct AutoWiseLogin: View {
     @State private var alertMessage: String = ""
     @State private var showAlert: Bool = false
     @State private var navigateToRegister: Bool = false
+    @State private var navigateToForgotPassword: Bool = false
     @State private var isLoading: Bool = false
     
     @State private var viewModel = LoginViewModel()
@@ -72,6 +80,9 @@ struct AutoWiseLogin: View {
             }
             .navigationDestination(isPresented: $navigateToRegister) {
                 AutoWiseCadastro()
+            }
+            .navigationDestination(isPresented: $navigateToForgotPassword) {
+                EsqueciSenhaView(initialEmail: viewModel.email)
             }
             .onAppear {
                 startEntrance()
@@ -158,6 +169,16 @@ struct AutoWiseLogin: View {
                     .font(AWTheme.caption(12))
                     .foregroundStyle(AWTheme.textSecondary)
                 AWSecureField(placeholder: "••••••••", text: $viewModel.password)
+                
+                Button {
+                    navigateToForgotPassword = true
+                } label: {
+                    Text("Esqueci minha senha")
+                        .font(AWTheme.caption(13))
+                        .foregroundStyle(AWTheme.accent)
+                }
+                .buttonStyle(.plain)
+                .frame(maxWidth: .infinity, alignment: .trailing)
             }
             
             AWPrimaryButton(

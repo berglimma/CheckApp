@@ -1,3 +1,10 @@
+//
+//  AvaliacaoTratorView.swift
+//  ChecklistApp
+//
+//  Created by Berg Limma on 15/06/26.
+//
+
 import SwiftUI
 import PencilKit
 import SwiftData
@@ -12,6 +19,7 @@ struct AvaliacaoTratorView: View {
     @State private var showAlert = false
     @State private var alertMessage = ""
     @State private var saved = false
+    @State private var notifyPayload: MessageComposePayload?
     
     private var isFormValid: Bool {
         !form.cliente.trimmingCharacters(in: .whitespaces).isEmpty
@@ -43,11 +51,21 @@ struct AvaliacaoTratorView: View {
                                 autocapitalization: .never
                             )
                             AWTextField(
-                                placeholder: "Telefone",
+                                placeholder: "Telefone (SMS / iMessage)",
                                 text: $form.telefoneCliente,
                                 keyboard: .phonePad,
                                 autocapitalization: .never
                             )
+                            AWTextField(
+                                placeholder: "E-mail do cliente (avisos vinculados)",
+                                text: $form.emailCliente,
+                                keyboard: .emailAddress,
+                                autocapitalization: .never
+                            )
+                            Text("A avaliação será notificada ao telefone e e-mail do cliente.")
+                                .font(AWTheme.caption(11))
+                                .foregroundStyle(AWTheme.textSecondary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
                             AWTextField(placeholder: "Avaliador / funcionário", text: $form.funcionario)
                             AWDateField(title: "Data", date: $form.dataRegistro)
                             AWTextField(
@@ -62,8 +80,12 @@ struct AvaliacaoTratorView: View {
                     AWSectionCard(title: "Equipamento") {
                         VStack(spacing: 12) {
                             AWTextField(placeholder: "Identificação / frota", text: $form.identificacao)
-                            AWTextField(placeholder: "Marca", text: $form.marca)
-                            AWTextField(placeholder: "Modelo", text: $form.modelo)
+                            AWBrandModelPicker(
+                                marca: $form.marca,
+                                modelo: $form.modelo,
+                                kind: .tractor,
+                                title: "Marca e modelo do trator"
+                            )
                             AWTextField(placeholder: "Nº de série", text: $form.serie)
                             AWTextField(
                                 placeholder: "Horímetro",
@@ -132,10 +154,27 @@ struct AvaliacaoTratorView: View {
         .toolbarBackground(AWTheme.screenGray, for: .navigationBar)
         .alert("Auto Wize", isPresented: $showAlert) {
             Button("OK") {
-                if saved { dismiss() }
+                if saved {
+                    notifyPayload = MessageNotifyService.payloadTrator(
+                        cliente: form.cliente,
+                        telefone: form.telefoneCliente,
+                        email: form.emailCliente,
+                        marca: form.marca,
+                        modelo: form.modelo,
+                        identificacao: form.identificacao,
+                        aprovado: form.aprovadoParaUso,
+                        condicao: form.condicaoGeral
+                    )
+                }
             }
         } message: {
             Text(alertMessage)
+        }
+        .sheet(item: $notifyPayload) { payload in
+            NotifyComposeSheet(payload: payload) {
+                notifyPayload = nil
+                dismiss()
+            }
         }
     }
     
@@ -167,6 +206,7 @@ struct AvaliacaoTratorView: View {
             campos: [
                 "Documento": form.documentoCliente,
                 "Telefone": form.telefoneCliente,
+                "E-mail": form.emailCliente,
                 "Marca": form.marca,
                 "Modelo": form.modelo,
                 "Série": form.serie,
@@ -184,8 +224,8 @@ struct AvaliacaoTratorView: View {
         ReportRepository.save(context: context, snapshot: snapshot)
         
         alertMessage = form.aprovadoParaUso
-            ? "Avaliação salva. Equipamento aprovado para uso."
-            : "Avaliação salva. Equipamento NÃO aprovado para uso."
+            ? "Avaliação salva. Em seguida envie o aviso por SMS/iMessage e e-mail."
+            : "Avaliação salva (NÃO aprovado). Em seguida envie o aviso vinculado ao e-mail."
         saved = true
         showAlert = true
     }

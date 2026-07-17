@@ -1,3 +1,10 @@
+//
+//  ProfileView.swift
+//  ChecklistApp
+//
+//  Created by Berg Limma on 15/06/26.
+//
+
 import SwiftUI
 import SwiftData
 import UIKit
@@ -11,7 +18,10 @@ struct ProfileView: View {
     @State private var name: String = ""
     @State private var phone: String = ""
     @State private var showAlert = false
+    @State private var alertMessage = "Dados atualizados."
     @State private var photoOwnerId: String = ""
+    @State private var showDeleteConfirm = false
+    @State private var isDeleting = false
     
     var body: some View {
         ZStack {
@@ -49,7 +59,61 @@ struct ProfileView: View {
                                 user.phone = phone
                                 try? context.save()
                             }
+                            alertMessage = "Dados atualizados."
                             showAlert = true
+                        }
+                        
+                        AWSectionCard(title: "Privacidade (LGPD)") {
+                            VStack(spacing: 10) {
+                                Text("Tratamos CPF, telefone, e-mail, fotos e assinaturas apenas para operações de frota. Ao excluir a conta, esses dados operacionais locais também são apagados neste dispositivo.")
+                                    .font(AWTheme.caption(12))
+                                    .foregroundStyle(AWTheme.textSecondary)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                
+                                Link(destination: AppStoreLinks.privacyPolicy) {
+                                    legalRow(title: "Política de Privacidade", systemImage: "hand.raised.fill")
+                                }
+                                
+                                Link(destination: AppStoreLinks.termsOfUse) {
+                                    legalRow(title: "Termos de Uso", systemImage: "doc.text.fill")
+                                }
+                                
+                                Link(destination: AppStoreLinks.support) {
+                                    legalRow(title: "Suporte", systemImage: "questionmark.circle.fill")
+                                }
+                                
+                                Link(destination: URL(string: "mailto:\(AppStoreLinks.supportEmail)")!) {
+                                    legalRow(title: AppStoreLinks.supportEmail, systemImage: "envelope.fill")
+                                }
+                            }
+                        }
+                        
+                        AWSectionCard(title: "Conta") {
+                            VStack(alignment: .leading, spacing: 12) {
+                                Text("A exclusão remove permanentemente sua conta, históricos, dados de clientes (incluindo CPF), fotos, assinaturas e reservas neste dispositivo.")
+                                    .font(AWTheme.caption(12))
+                                    .foregroundStyle(AWTheme.textSecondary)
+                                
+                                Button(role: .destructive) {
+                                    showDeleteConfirm = true
+                                } label: {
+                                    HStack {
+                                        if isDeleting {
+                                            ProgressView()
+                                                .tint(.white)
+                                        }
+                                        Text(isDeleting ? "Excluindo..." : "Excluir minha conta")
+                                            .font(AWTheme.headline(16))
+                                    }
+                                    .foregroundStyle(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: AWTheme.fieldHeight)
+                                    .background(AWTheme.danger)
+                                    .clipShape(RoundedRectangle(cornerRadius: AWTheme.radiusM, style: .continuous))
+                                }
+                                .buttonStyle(.plain)
+                                .disabled(isDeleting)
+                            }
                         }
                         
                         AWSecondaryButton(title: "Voltar") { dismiss() }
@@ -79,7 +143,46 @@ struct ProfileView: View {
         .alert("Perfil", isPresented: $showAlert) {
             Button("OK", role: .cancel) {}
         } message: {
-            Text("Dados atualizados.")
+            Text(alertMessage)
+        }
+        .confirmationDialog(
+            "Excluir conta?",
+            isPresented: $showDeleteConfirm,
+            titleVisibility: .visible
+        ) {
+            Button("Excluir permanentemente", role: .destructive) {
+                Task { await deleteAccount() }
+            }
+            Button("Cancelar", role: .cancel) {}
+        } message: {
+            Text("Esta ação não pode ser desfeita. Serão apagados: sua conta, históricos, CPF/dados de clientes, fotos, assinaturas e reservas neste aparelho.")
+        }
+    }
+    
+    private func legalRow(title: String, systemImage: String) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: systemImage)
+                .foregroundStyle(AWTheme.accent)
+            Text(title)
+                .font(AWTheme.headline(14))
+                .foregroundStyle(AWTheme.textPrimary)
+            Spacer()
+            Image(systemName: "chevron.right")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(AWTheme.textSecondary.opacity(0.5))
+        }
+        .padding(.vertical, 8)
+    }
+    
+    private func deleteAccount() async {
+        isDeleting = true
+        defer { isDeleting = false }
+        
+        do {
+            try await session.deleteAccount(context: context)
+        } catch {
+            alertMessage = error.localizedDescription
+            showAlert = true
         }
     }
 }

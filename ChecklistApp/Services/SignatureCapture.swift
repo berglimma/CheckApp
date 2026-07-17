@@ -1,3 +1,10 @@
+//
+//  SignatureCapture.swift
+//  ChecklistApp
+//
+//  Created by Berg Limma on 15/06/26.
+//
+
 import UIKit
 import PencilKit
 

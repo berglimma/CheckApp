@@ -1,3 +1,10 @@
+//
+//  ChecklistDevolucao.swift
+//  ChecklistApp
+//
+//  Created by Berg Limma on 15/06/26.
+//
+
 import SwiftData
 import Foundation
 
@@ -8,6 +15,7 @@ class ChecklistDevolucao {
     var cliente: String = ""
     var documentoCliente: String = ""
     var telefoneCliente: String = ""
+    var emailCliente: String = ""
     var dataRegistro: Date = Date()
     var horaRegistro: String = ""
     var funcionario: String = ""
@@ -31,6 +39,7 @@ class ChecklistDevolucao {
         cliente: String = "",
         documentoCliente: String = "",
         telefoneCliente: String = "",
+        emailCliente: String = "",
         dataRegistro: Date = Date(),
         horaRegistro: String = "",
         funcionario: String = "",
@@ -53,6 +62,7 @@ class ChecklistDevolucao {
         self.cliente = cliente
         self.documentoCliente = documentoCliente
         self.telefoneCliente = telefoneCliente
+        self.emailCliente = emailCliente
         self.dataRegistro = dataRegistro
         self.horaRegistro = horaRegistro
         self.funcionario = funcionario

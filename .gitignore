@@ -1,0 +1,41 @@
+# Xcode / macOS
+.DS_Store
+*.swp
+*~
+DerivedData/
+build/
+*.xcuserstate
+**/xcuserdata/
+*.moved-aside
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Swift Package Manager
+.swiftpm/
+Packages/
+Package.resolved
+.sourcepackages/
+
+# Secrets / Firebase (mantenha o .example no repositório)
+ChecklistApp/GoogleService-Info.plist
+**/GoogleService-Info.plist
+!**/GoogleService-Info.example.plist
+
+# Env / keys
+.env
+.env.*
+*.pem
+*.p12
+*.mobileprovision
+
+# Fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output
+
+# Playgrounds
+timeline.xctimeline
+playground.xcworkspace

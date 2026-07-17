@@ -1,3 +1,10 @@
+//
+//  ChecklistView.swift
+//  ChecklistApp
+//
+//  Created by Berg Limma on 15/06/26.
+//
+
 import SwiftUI
 import PencilKit
 import SwiftData
@@ -9,6 +16,7 @@ struct ChecklistView: View {
     
     @State private var canvasView = PKCanvasView()
     @State private var activeAlert: AlertType?
+    @State private var notifyPayload: MessageComposePayload?
     
     enum AlertType: Identifiable {
         case saveSuccess, validationError
@@ -29,6 +37,7 @@ struct ChecklistView: View {
             && !c.horaRegistro.trimmingCharacters(in: .whitespaces).isEmpty
             && !c.modelo.trimmingCharacters(in: .whitespaces).isEmpty
             && !c.kmAtual.trimmingCharacters(in: .whitespaces).isEmpty
+            && !c.numeroReserva.trimmingCharacters(in: .whitespaces).isEmpty
     }
     
     var body: some View {
@@ -42,7 +51,7 @@ struct ChecklistView: View {
                         subtitle: "Documente a saída do veículo"
                     )
                     
-                    AWSectionCard(title: "Cliente") {
+                    AWSectionCard(title: "Cliente e reserva") {
                         VStack(spacing: 12) {
                             AWTextField(
                                 placeholder: "Nome do cliente",
@@ -52,17 +61,33 @@ struct ChecklistView: View {
                                 )
                             )
                             AWTextField(
+                                placeholder: "Nº da reserva",
+                                text: $viewModel.checklistEntrega.numeroReserva,
+                                keyboard: .asciiCapable,
+                                autocapitalization: .characters
+                            )
+                            AWTextField(
                                 placeholder: "CPF / Documento",
                                 text: $viewModel.checklistEntrega.documentoCliente,
                                 keyboard: .numbersAndPunctuation,
                                 autocapitalization: .never
                             )
                             AWTextField(
-                                placeholder: "Telefone",
+                                placeholder: "Telefone (SMS / iMessage)",
                                 text: $viewModel.checklistEntrega.telefoneCliente,
                                 keyboard: .phonePad,
                                 autocapitalization: .never
                             )
+                            AWTextField(
+                                placeholder: "E-mail do cliente",
+                                text: $viewModel.checklistEntrega.emailCliente,
+                                keyboard: .emailAddress,
+                                autocapitalization: .never
+                            )
+                            Text("Avisos da reserva serão enviados ao telefone e e-mail.")
+                                .font(AWTheme.caption(11))
+                                .foregroundStyle(AWTheme.textSecondary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
                         }
                     }
                     
@@ -73,8 +98,11 @@ struct ChecklistView: View {
                                 text: $viewModel.checklistEntrega.placa,
                                 autocapitalization: .characters
                             )
-                            AWTextField(placeholder: "Marca", text: $viewModel.checklistEntrega.marca)
-                            AWTextField(placeholder: "Modelo", text: $viewModel.checklistEntrega.modelo)
+                            AWBrandModelPicker(
+                                marca: $viewModel.checklistEntrega.marca,
+                                modelo: $viewModel.checklistEntrega.modelo,
+                                kind: .car
+                            )
                             AWTextField(placeholder: "Cor", text: $viewModel.checklistEntrega.cor)
                             AWTextField(
                                 placeholder: "KM atual",
@@ -155,11 +183,28 @@ struct ChecklistView: View {
             case .saveSuccess:
                 return Alert(
                     title: Text("Sucesso"),
-                    message: Text("Checklist de entrega salvo. Você pode exportar o PDF em Histórico ou Relatórios."),
-                    dismissButton: .default(Text("OK")) { dismiss() }
+                    message: Text("Reserva aberta. Em seguida você pode enviar o aviso por SMS/iMessage e e-mail."),
+                    dismissButton: .default(Text("OK")) {
+                        let c = viewModel.checklistEntrega
+                        notifyPayload = MessageNotifyService.payloadReservaAberta(
+                            numero: c.numeroReserva,
+                            cliente: c.cliente ?? "",
+                            telefone: c.telefoneCliente,
+                            email: c.emailCliente,
+                            placa: c.placa,
+                            marca: c.marca,
+                            modelo: c.modelo
+                        )
+                    }
                 )
             case .validationError:
-                return Alert(title: Text("Atenção"), message: Text("Preencha cliente, placa, modelo, KM, funcionário e hora."), dismissButton: .default(Text("OK")))
+                return Alert(title: Text("Atenção"), message: Text("Preencha cliente, nº da reserva, placa, modelo, KM, funcionário e hora."), dismissButton: .default(Text("OK")))
+            }
+        }
+        .sheet(item: $notifyPayload) { payload in
+            NotifyComposeSheet(payload: payload) {
+                notifyPayload = nil
+                dismiss()
             }
         }
     }
@@ -184,8 +229,10 @@ struct ChecklistView: View {
             dataRegistro: c.dataRegistro,
             horaRegistro: c.horaRegistro,
             campos: [
+                "Nº Reserva": c.numeroReserva,
                 "Documento": c.documentoCliente,
                 "Telefone": c.telefoneCliente,
+                "E-mail": c.emailCliente,
                 "Marca": c.marca,
                 "Modelo": c.modelo,
                 "Cor": c.cor,

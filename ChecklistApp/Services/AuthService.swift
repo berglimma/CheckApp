@@ -1,3 +1,10 @@
+//
+//  AuthService.swift
+//  ChecklistApp
+//
+//  Created by Berg Limma on 15/06/26.
+//
+
 import Foundation
 import SwiftData
 import AuthenticationServices
@@ -81,12 +88,19 @@ final class AuthService: ObservableObject {
         }
         #endif
         
-        // Fallback local SwiftData
-        let descriptor = FetchDescriptor<User>(
-            predicate: #Predicate { $0.email == email && $0.password == password }
-        )
-        guard let user = try context.fetch(descriptor).first else {
+        // Fallback local SwiftData (senha com hash; migra legado em texto puro)
+        let normalizedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
+        let descriptor = FetchDescriptor<User>()
+        let users = try context.fetch(descriptor)
+        guard let user = users.first(where: {
+            $0.email.caseInsensitiveCompare(normalizedEmail) == .orderedSame
+        }), PasswordHasher.verify(password, against: user.password) else {
             throw AuthServiceError.invalidCredentials
+        }
+        
+        if PasswordHasher.needsRehash(user.password) {
+            user.password = PasswordHasher.hash(password)
+            try context.save()
         }
         return user
     }
@@ -102,6 +116,8 @@ final class AuthService: ObservableObject {
         isLoading = true
         defer { isLoading = false }
         
+        let hashed = PasswordHasher.hash(password)
+        
         #if canImport(FirebaseAuth)
         if isConfigured {
             let result = try await Auth.auth().createUser(withEmail: email, password: password)
@@ -113,16 +129,46 @@ final class AuthService: ObservableObject {
                 fallbackName: name,
                 phone: phone,
                 role: role,
-                password: password,
+                password: hashed,
                 context: context
             )
         }
         #endif
         
-        let user = User(name: name, email: email, phone: phone, password: password, role: role)
+        let user = User(name: name, email: email, phone: phone, password: hashed, role: role)
         context.insert(user)
         try context.save()
         return user
+    }
+    
+    /// Envia e-mail de recuperação de senha (Firebase) ou gera código local.
+    func sendPasswordReset(email: String, context: ModelContext) async throws -> PasswordResetResult {
+        let trimmed = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !trimmed.isEmpty else { throw AuthServiceError.invalidCredentials }
+        
+        #if canImport(FirebaseAuth)
+        if isConfigured {
+            do {
+                try await Auth.auth().sendPasswordReset(withEmail: trimmed)
+                return .firebaseEmailSent
+            } catch {
+                print("Firebase reset falhou: \(error.localizedDescription)")
+            }
+        }
+        #endif
+        
+        let descriptor = FetchDescriptor<User>()
+        let users = try context.fetch(descriptor)
+        guard let user = users.first(where: {
+            $0.email.caseInsensitiveCompare(trimmed) == .orderedSame
+        }) else {
+            throw AuthServiceError.emailNotFound
+        }
+        
+        let code = String(Int.random(in: 100000...999999))
+        user.password = PasswordHasher.hash(code)
+        try context.save()
+        return .localTemporaryPassword(code: code, phone: user.phone, name: user.name)
     }
     
     // MARK: - Apple
@@ -209,6 +255,52 @@ final class AuthService: ObservableObject {
         #endif
     }
     
+    /// Exclui a conta no Firebase (se houver) e remove dados locais:
+    /// usuário, fotos, históricos, checklists, CPF/clientes e reservas.
+    func deleteAccount(user: User, context: ModelContext) async throws {
+        isLoading = true
+        defer { isLoading = false }
+        
+        let email = user.email
+        
+        #if canImport(FirebaseAuth)
+        if isConfigured, let firebaseUser = Auth.auth().currentUser {
+            if (firebaseUser.email ?? "").caseInsensitiveCompare(email) == .orderedSame {
+                do {
+                    try await firebaseUser.delete()
+                } catch {
+                    let nsError = error as NSError
+                    if nsError.domain == AuthErrorDomain,
+                       nsError.code == AuthErrorCode.requiresRecentLogin.rawValue {
+                        throw AuthServiceError.requiresRecentLogin
+                    }
+                    throw AuthServiceError.deleteAccountFailed
+                }
+            }
+        }
+        #endif
+        
+        #if canImport(GoogleSignIn)
+        GIDSignIn.sharedInstance.signOut()
+        #endif
+        
+        do {
+            // 1) Históricos, devoluções, clientes, carros, fotos, reservas e UserDefaults
+            try AccountDataEraser.eraseAllOperationalData(context: context)
+            
+            // 2) Conta do usuário
+            let userEmail = email
+            let remainingUsers = try context.fetch(FetchDescriptor<User>())
+            for localUser in remainingUsers where localUser.email.caseInsensitiveCompare(userEmail) == .orderedSame {
+                context.delete(localUser)
+            }
+            
+            try context.save()
+        } catch {
+            throw AuthServiceError.deleteAccountFailed
+        }
+    }
+    
     // MARK: - Helpers
     
     #if canImport(FirebaseAuth)
@@ -239,10 +331,18 @@ final class AuthService: ObservableObject {
         if let existing = try context.fetch(descriptor).first {
             existing.name = name
             if !phone.isEmpty { existing.phone = phone }
+            if !password.isEmpty, password != "oauth", PasswordHasher.needsRehash(existing.password) || existing.password != password {
+                // Se já veio hasheado (64 hex) guarda direto; senão hasheia
+                existing.password = PasswordHasher.isHashed(password) ? password : PasswordHasher.hash(password)
+            }
             try context.save()
             return existing
         }
-        let user = User(name: name, email: email, phone: phone, password: password, role: role)
+        let storedPassword: String = {
+            if password.isEmpty || password == "oauth" { return PasswordHasher.hash(UUID().uuidString) }
+            return PasswordHasher.isHashed(password) ? password : PasswordHasher.hash(password)
+        }()
+        let user = User(name: name, email: email, phone: phone, password: storedPassword, role: role)
         context.insert(user)
         try context.save()
         return user
@@ -277,6 +377,9 @@ enum AuthServiceError: LocalizedError {
     case appleFailed
     case googleFailed
     case firebaseNotConfigured
+    case emailNotFound
+    case deleteAccountFailed
+    case requiresRecentLogin
     
     var errorDescription: String? {
         switch self {
@@ -285,6 +388,17 @@ enum AuthServiceError: LocalizedError {
         case .googleFailed: return "Falha no login com Google."
         case .firebaseNotConfigured:
             return "Firebase não configurado. Adicione o GoogleService-Info.plist e os pacotes Firebase/GoogleSignIn no Xcode."
+        case .emailNotFound:
+            return "Nenhuma conta encontrada com este e-mail."
+        case .deleteAccountFailed:
+            return "Não foi possível excluir a conta. Tente novamente."
+        case .requiresRecentLogin:
+            return "Por segurança, faça login novamente e tente excluir a conta."
         }
     }
+}
+
+enum PasswordResetResult {
+    case firebaseEmailSent
+    case localTemporaryPassword(code: String, phone: String, name: String)
 }

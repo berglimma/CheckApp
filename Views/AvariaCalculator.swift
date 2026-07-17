@@ -1,3 +1,10 @@
+//
+//  AvariaCalculator.swift
+//  ChecklistApp
+//
+//  Created by Berg Limma on 15/06/26.
+//
+
 import SwiftUI
 import PDFKit
 
@@ -10,6 +17,7 @@ struct AvariaCalculator: View {
     @State private var showAlert = false
     @State private var alertMessage = ""
     @State private var saved = false
+    @State private var notifyPayload: MessageComposePayload?
     
     private var totalAvarias: Double {
         viewModel.avarias.reduce(0) { $0 + $1.value }
@@ -35,6 +43,22 @@ struct AvariaCalculator: View {
                     AWSectionCard(title: "Identificação") {
                         VStack(spacing: 12) {
                             AWTextField(placeholder: "Cliente", text: $viewModel.cliente)
+                            AWTextField(
+                                placeholder: "Telefone (SMS / iMessage)",
+                                text: $viewModel.telefoneCliente,
+                                keyboard: .phonePad,
+                                autocapitalization: .never
+                            )
+                            AWTextField(
+                                placeholder: "E-mail do cliente",
+                                text: $viewModel.emailCliente,
+                                keyboard: .emailAddress,
+                                autocapitalization: .never
+                            )
+                            Text("Avisos de avarias serão enviados ao telefone e e-mail.")
+                                .font(AWTheme.caption(11))
+                                .foregroundStyle(AWTheme.textSecondary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
                             AWTextField(placeholder: "Funcionário", text: $viewModel.funcionario)
                             AWTextField(placeholder: "Modelo / veículo", text: $viewModel.nomeCarro)
                             AWTextField(
@@ -182,10 +206,29 @@ struct AvariaCalculator: View {
         .toolbarBackground(AWTheme.screenGray, for: .navigationBar)
         .alert("Auto Wize", isPresented: $showAlert) {
             Button("OK") {
-                if saved { dismiss() }
+                if saved {
+                    let detalhe = viewModel.avarias
+                        .map { "• \($0.name) — R$ \(String(format: "%.2f", $0.value))" }
+                        .joined(separator: "\n")
+                    notifyPayload = MessageNotifyService.payloadAvarias(
+                        cliente: viewModel.cliente,
+                        telefone: viewModel.telefoneCliente,
+                        email: viewModel.emailCliente,
+                        placa: viewModel.placaCarro,
+                        veiculo: viewModel.nomeCarro,
+                        total: String(format: "R$ %.2f", totalAvarias),
+                        detalhe: detalhe
+                    )
+                }
             }
         } message: {
             Text(alertMessage)
+        }
+        .sheet(item: $notifyPayload) { payload in
+            NotifyComposeSheet(payload: payload) {
+                notifyPayload = nil
+                dismiss()
+            }
         }
     }
     
@@ -193,6 +236,8 @@ struct AvariaCalculator: View {
         var campos: [String: String] = [
             "Veículo": viewModel.nomeCarro,
             "KM": viewModel.kmAtual,
+            "Telefone": viewModel.telefoneCliente,
+            "E-mail": viewModel.emailCliente,
             "Total": String(format: "R$ %.2f", totalAvarias)
         ]
         for (index, avaria) in viewModel.avarias.enumerated() {
@@ -218,7 +263,7 @@ struct AvariaCalculator: View {
         )
         ReportRepository.save(context: context, snapshot: snapshot)
         
-        alertMessage = "Avarias salvas. Você pode exportar o PDF em Histórico ou Relatórios."
+        alertMessage = "Avarias salvas. Em seguida envie o aviso por SMS/iMessage e e-mail ao cliente."
         saved = true
         showAlert = true
     }

@@ -1,3 +1,10 @@
+//
+//  User.swift
+//  ChecklistApp
+//
+//  Created by Berg Limma on 15/06/26.
+//
+
 import Foundation
 import SwiftData
 

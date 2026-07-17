@@ -1,3 +1,10 @@
+//
+//  ChecklistDevolucaoView.swift
+//  ChecklistApp
+//
+//  Created by Berg Limma on 15/06/26.
+//
+
 import SwiftUI
 import PencilKit
 import SwiftData
@@ -9,6 +16,7 @@ struct ChecklistDevolucaoView: View {
     @StateObject private var viewModel = ChecklistDevolucaoViewModel()
     @State private var canvasView = PKCanvasView()
     @State private var activeAlert: AlertType?
+    @State private var notifyPayload: MessageComposePayload?
     
     enum AlertType: Identifiable {
         case saveSuccess, validationError
@@ -51,11 +59,21 @@ struct ChecklistDevolucaoView: View {
                                 autocapitalization: .never
                             )
                             AWTextField(
-                                placeholder: "Telefone",
+                                placeholder: "Telefone (SMS / iMessage)",
                                 text: $viewModel.checklistDevolucao.telefoneCliente,
                                 keyboard: .phonePad,
                                 autocapitalization: .never
                             )
+                            AWTextField(
+                                placeholder: "E-mail do cliente",
+                                text: $viewModel.checklistDevolucao.emailCliente,
+                                keyboard: .emailAddress,
+                                autocapitalization: .never
+                            )
+                            Text("Avisos de movimentação serão enviados ao telefone e e-mail.")
+                                .font(AWTheme.caption(11))
+                                .foregroundStyle(AWTheme.textSecondary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
                         }
                     }
                     
@@ -66,8 +84,11 @@ struct ChecklistDevolucaoView: View {
                                 text: $viewModel.checklistDevolucao.placa,
                                 autocapitalization: .characters
                             )
-                            AWTextField(placeholder: "Marca", text: $viewModel.checklistDevolucao.marca)
-                            AWTextField(placeholder: "Modelo", text: $viewModel.checklistDevolucao.modelo)
+                            AWBrandModelPicker(
+                                marca: $viewModel.checklistDevolucao.marca,
+                                modelo: $viewModel.checklistDevolucao.modelo,
+                                kind: .car
+                            )
                             AWTextField(placeholder: "Cor", text: $viewModel.checklistDevolucao.cor)
                             AWTextField(
                                 placeholder: "KM na saída",
@@ -166,11 +187,29 @@ struct ChecklistDevolucaoView: View {
             case .saveSuccess:
                 return Alert(
                     title: Text("Sucesso"),
-                    message: Text("Checklist de devolução salvo. Você pode exportar o PDF em Histórico ou Relatórios."),
-                    dismissButton: .default(Text("OK")) { dismiss() }
+                    message: Text("Devolução salva. Em seguida envie o aviso por SMS/iMessage e e-mail ao cliente."),
+                    dismissButton: .default(Text("OK")) {
+                        let c = viewModel.checklistDevolucao
+                        notifyPayload = MessageNotifyService.payloadDevolucao(
+                            cliente: c.cliente,
+                            telefone: c.telefoneCliente,
+                            email: c.emailCliente,
+                            placa: c.placa,
+                            marca: c.marca,
+                            modelo: c.modelo,
+                            kmRetorno: c.kmRetorno,
+                            possuiAvarias: c.possuiAvarias
+                        )
+                    }
                 )
             case .validationError:
                 return Alert(title: Text("Atenção"), message: Text("Preencha cliente, placa, KM retorno, funcionário e hora."), dismissButton: .default(Text("OK")))
+            }
+        }
+        .sheet(item: $notifyPayload) { payload in
+            NotifyComposeSheet(payload: payload) {
+                notifyPayload = nil
+                dismiss()
             }
         }
     }
@@ -198,6 +237,7 @@ struct ChecklistDevolucaoView: View {
             campos: [
                 "Documento": c.documentoCliente,
                 "Telefone": c.telefoneCliente,
+                "E-mail": c.emailCliente,
                 "Marca": c.marca,
                 "Modelo": c.modelo,
                 "Cor": c.cor,

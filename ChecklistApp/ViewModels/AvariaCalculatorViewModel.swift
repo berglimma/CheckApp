@@ -1,3 +1,10 @@
+//
+//  AvariaCalculatorViewModel.swift
+//  ChecklistApp
+//
+//  Created by Berg Limma on 15/06/26.
+//
+
 import PDFKit
 import SwiftUI
 
@@ -10,6 +17,8 @@ class AvariaCalculatorViewModel: ObservableObject {
     @Published var localDano: String = ""
     
     @Published var cliente: String = ""
+    @Published var telefoneCliente: String = ""
+    @Published var emailCliente: String = ""
     @Published var funcionario: String = ""
     @Published var nomeCarro: String = ""
     @Published var placaCarro: String = ""
