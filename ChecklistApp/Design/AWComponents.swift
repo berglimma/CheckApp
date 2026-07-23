@@ -246,7 +246,7 @@ struct AWMenuRow<Destination: View>: View {
     var delay: Double = 0
     var showsDivider: Bool = false
     
-    @State private var appeared = false
+    @State private var appeared = true
     
     var body: some View {
         VStack(spacing: 0) {
@@ -292,11 +292,10 @@ struct AWMenuRow<Destination: View>: View {
                     .padding(.leading, 56)
             }
         }
-        .opacity(appeared ? 1 : 0)
+        .opacity(appeared ? 1 : 0.01)
         .onAppear {
-            withAnimation(.easeOut(duration: 0.35).delay(delay)) {
-                appeared = true
-            }
+            // Garante visibilidade no iPad (ScrollView às vezes não aplica animação com delay).
+            appeared = true
         }
     }
 }

@@ -21,4 +21,15 @@ enum AppStoreLinks {
         static let name = "Demo App Review"
         static let phone = "11999990000"
     }
+    
+    /// E-mails que devem permanecer administradores em qualquer dispositivo/simulador.
+    static let persistentAdminEmails: [String] = [
+        DemoAccount.email,
+        "berg.limma@gmail.com"
+    ]
+    
+    static func isPersistentAdminEmail(_ email: String) -> Bool {
+        let normalized = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return persistentAdminEmails.contains { $0.lowercased() == normalized }
+    }
 }

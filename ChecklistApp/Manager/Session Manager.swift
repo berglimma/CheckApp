@@ -19,11 +19,14 @@ final class SessionManager: ObservableObject {
     }
     
     var isAdmin: Bool {
-        currentUser?.role == .admin
+        guard let user = currentUser else { return false }
+        if user.role == .admin { return true }
+        return AppStoreLinks.isPersistentAdminEmail(user.email)
     }
     
     var roleTitle: String {
-        currentUser?.role.titulo ?? UserRole.operador.titulo
+        if isAdmin { return UserRole.admin.titulo }
+        return currentUser?.role.titulo ?? UserRole.operador.titulo
     }
     
     /// Limite máximo de contas administradoras.

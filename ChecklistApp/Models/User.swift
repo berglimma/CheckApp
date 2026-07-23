@@ -80,8 +80,9 @@ enum UserRole: String, Codable, CaseIterable, Identifiable {
     
     /// Compatível com contas antigas salvas como `normal`.
     static func fromStorage(_ raw: String) -> UserRole {
-        if raw == "normal" { return .operador }
-        return UserRole(rawValue: raw) ?? .operador
+        let normalized = raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        if normalized == "normal" { return .operador }
+        return UserRole(rawValue: normalized) ?? .operador
     }
 }
 

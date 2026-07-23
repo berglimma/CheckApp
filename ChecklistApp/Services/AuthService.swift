@@ -418,8 +418,16 @@ final class AuthService: ObservableObject {
     }
     
     private func finalizeLocalLogin(_ user: User, password: String, context: ModelContext) throws -> User {
+        var changed = false
         if PasswordHasher.needsRehash(user.password) {
             user.password = PasswordHasher.hash(password)
+            changed = true
+        }
+        if AppStoreLinks.isPersistentAdminEmail(user.email), user.role != .admin {
+            user.role = .admin
+            changed = true
+        }
+        if changed {
             try context.save()
         }
         return user
@@ -528,14 +536,14 @@ final class AuthService: ObservableObject {
         let email = firebaseUser.email ?? "\(firebaseUser.uid)@autowize.local"
         let name = firebaseUser.displayName?.isEmpty == false ? (firebaseUser.displayName ?? fallbackName) : fallbackName
         
-        // Preserva papel local (admin/operador); demo continua admin
+        // Preserva papel local (admin/operador); demo / e-mails privilegiados continuam admin
         let resolvedRole: UserRole = {
             if let role { return role }
+            if AppStoreLinks.isPersistentAdminEmail(email) {
+                return .admin
+            }
             if let existing = try? findLocalUser(email: email, context: context) {
                 return existing.role
-            }
-            if email.caseInsensitiveCompare(AppStoreLinks.DemoAccount.email) == .orderedSame {
-                return .admin
             }
             return .operador
         }()
@@ -564,11 +572,11 @@ final class AuthService: ObservableObject {
         if let existing = try findLocalUser(email: email, context: context) {
             existing.name = name
             if !phone.isEmpty { existing.phone = phone }
-            // Não rebaixa admin existente no login social/Firebase
-            if existing.role != .admin, role == .admin {
-                if SessionManager.canAddAdmin(context: context) {
-                    existing.role = .admin
-                }
+            // Não rebaixa admin; promove e-mails privilegiados (demo / berg.limma)
+            if AppStoreLinks.isPersistentAdminEmail(existing.email)
+                || AppStoreLinks.isPersistentAdminEmail(email)
+                || role == .admin {
+                existing.role = .admin
             }
             if !password.isEmpty, password != "oauth" {
                 existing.password = PasswordHasher.isHashed(password) ? password : PasswordHasher.hash(password)

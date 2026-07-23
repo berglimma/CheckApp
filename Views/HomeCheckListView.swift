@@ -111,25 +111,27 @@ struct HomeCheckListView: View {
                             )
                             
                             if session.isAdmin {
-                                AWMenuRow(
-                                    title: "Cadastro de Usuário",
-                                    subtitle: "Criar operador ou administrador",
-                                    systemImage: "person.badge.plus",
-                                    accent: AWTheme.moduleUsuarios,
-                                    destination: AutoWiseCadastro(),
-                                    delay: 0.36,
-                                    showsDivider: true
-                                )
-                                
-                                AWMenuRow(
-                                    title: "Equipe",
-                                    subtitle: "Listar e alterar perfis de acesso",
-                                    systemImage: "person.3.fill",
-                                    accent: AWTheme.moduleUsuarios,
-                                    destination: UsersListView(),
-                                    delay: 0.4,
-                                    showsDivider: false
-                                )
+                                Group {
+                                    AWMenuRow(
+                                        title: "Cadastro de Usuário",
+                                        subtitle: "Criar operador, funcionário ou administrador",
+                                        systemImage: "person.badge.plus",
+                                        accent: AWTheme.moduleUsuarios,
+                                        destination: AutoWiseCadastro(),
+                                        delay: 0.36,
+                                        showsDivider: true
+                                    )
+                                    
+                                    AWMenuRow(
+                                        title: "Equipe",
+                                        subtitle: "Listar e alterar perfis de acesso",
+                                        systemImage: "person.3.fill",
+                                        accent: AWTheme.moduleUsuarios,
+                                        destination: UsersListView(),
+                                        delay: 0.4,
+                                        showsDivider: false
+                                    )
+                                }
                             }
                         }
                         
@@ -145,9 +147,19 @@ struct HomeCheckListView: View {
             .navigationBarTitleDisplayMode(.inline)
             .onAppear {
                 session.loadProfileImage(context: context)
+                ensurePersistentAdminRole()
             }
         }
-        .navigationSplitViewStyle(.automatic)
+    }
+    
+    /// Garante que contas privilegiadas (berg.limma / demo) fiquem admin e o menu atualize no iPad.
+    private func ensurePersistentAdminRole() {
+        guard let user = session.currentUser,
+              AppStoreLinks.isPersistentAdminEmail(user.email),
+              user.role != .admin else { return }
+        user.role = .admin
+        try? context.save()
+        session.objectWillChange.send()
     }
     
     private var header: some View {
