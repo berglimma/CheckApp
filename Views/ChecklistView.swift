@@ -119,17 +119,16 @@ struct ChecklistView: View {
                             )
                             AWTextField(
                                 placeholder: "CPF / Documento",
-                                text: Binding(
-                                    get: {
-                                        viewModel.checklistEntrega.documentoCliente
-                                    },
-                                    set: { novoValor in
-                                        viewModel.checklistEntrega.documentoCliente = DocumentFormatter.cpf(novoValor)
-                                    }
-                                ),
-                                keyboard: .numbersAndPunctuation,
+                                text: $viewModel.checklistEntrega.documentoCliente,
+                                keyboard: .numberPad,
                                 autocapitalization: .never
                             )
+                            .onChange(of: viewModel.checklistEntrega.documentoCliente) { _, novoValor in
+                                let formatado = DocumentFormatter.cpf(novoValor)
+                                if formatado != novoValor {
+                                    viewModel.checklistEntrega.documentoCliente = formatado
+                                }
+                            }
                             AWTextField(
                                 placeholder: "Telefone (SMS / iMessage)",
                                 text: $viewModel.checklistEntrega.telefoneCliente,

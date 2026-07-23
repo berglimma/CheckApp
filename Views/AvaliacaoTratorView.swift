@@ -46,9 +46,15 @@ struct AvaliacaoTratorView: View {
                             AWTextField(
                                 placeholder: "CPF / Documento",
                                 text: $form.documentoCliente,
-                                keyboard: .numbersAndPunctuation,
+                                keyboard: .numberPad,
                                 autocapitalization: .never
                             )
+                            .onChange(of: form.documentoCliente) { _, novoValor in
+                                let formatado = DocumentFormatter.cpf(novoValor)
+                                if formatado != novoValor {
+                                    form.documentoCliente = formatado
+                                }
+                            }
                             AWTextField(
                                 placeholder: "Telefone (SMS / iMessage)",
                                 text: $form.telefoneCliente,

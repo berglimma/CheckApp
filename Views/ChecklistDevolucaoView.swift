@@ -126,17 +126,16 @@ struct ChecklistDevolucaoView: View {
                             AWTextField(placeholder: "Nome do cliente", text: $viewModel.checklistDevolucao.cliente)
                             AWTextField(
                                 placeholder: "CPF / Documento",
-                                text: Binding(
-                                    get: {
-                                        viewModel.checklistDevolucao.documentoCliente
-                                    },
-                                    set: { novoValor in
-                                        viewModel.checklistDevolucao.documentoCliente = DocumentFormatter.cpf(novoValor)
-                                    }
-                                ),
-                                keyboard: .numbersAndPunctuation,
+                                text: $viewModel.checklistDevolucao.documentoCliente,
+                                keyboard: .numberPad,
                                 autocapitalization: .never
                             )
+                            .onChange(of: viewModel.checklistDevolucao.documentoCliente) { _, novoValor in
+                                let formatado = DocumentFormatter.cpf(novoValor)
+                                if formatado != novoValor {
+                                    viewModel.checklistDevolucao.documentoCliente = formatado
+                                }
+                            }
                             AWTextField(
                                 placeholder: "Telefone (SMS / iMessage)",
                                 text: $viewModel.checklistDevolucao.telefoneCliente,
