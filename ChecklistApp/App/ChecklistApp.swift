@@ -52,7 +52,7 @@ struct ChecklistAppApp: App {
                     AutoWiseLogin()
                         .transition(.opacity)
                 } else if isShowingLoginTransition {
-                    LoginTransitionView(duration: 4) {
+                    LoginTransitionView {
                         withAnimation(.easeInOut(duration: 0.35)) {
                             isShowingLoginTransition = false
                         }
