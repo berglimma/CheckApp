@@ -126,7 +126,14 @@ struct ChecklistDevolucaoView: View {
                             AWTextField(placeholder: "Nome do cliente", text: $viewModel.checklistDevolucao.cliente)
                             AWTextField(
                                 placeholder: "CPF / Documento",
-                                text: $viewModel.checklistDevolucao.documentoCliente,
+                                text: Binding(
+                                    get: {
+                                        viewModel.checklistDevolucao.documentoCliente
+                                    },
+                                    set: { novoValor in
+                                        viewModel.checklistDevolucao.documentoCliente = DocumentFormatter.cpf(novoValor)
+                                    }
+                                ),
                                 keyboard: .numbersAndPunctuation,
                                 autocapitalization: .never
                             )

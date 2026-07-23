@@ -119,7 +119,14 @@ struct ChecklistView: View {
                             )
                             AWTextField(
                                 placeholder: "CPF / Documento",
-                                text: $viewModel.checklistEntrega.documentoCliente,
+                                text: Binding(
+                                    get: {
+                                        viewModel.checklistEntrega.documentoCliente
+                                    },
+                                    set: { novoValor in
+                                        viewModel.checklistEntrega.documentoCliente = DocumentFormatter.cpf(novoValor)
+                                    }
+                                ),
                                 keyboard: .numbersAndPunctuation,
                                 autocapitalization: .never
                             )
