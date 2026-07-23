@@ -33,6 +33,10 @@ final class AutoWiseCadastroController {
             return .failure(.senhasNaoConferem)
         }
         
+        guard PasswordPolicy.isValid(password) else {
+            return .failure(.senhaFraca)
+        }
+        
         let descriptor = FetchDescriptor<User>(
             predicate: #Predicate { $0.email == email }
         )

@@ -56,7 +56,19 @@ struct AutoWiseCadastro: View {
     }
     
     private var canSave: Bool {
-        !name.isEmpty && !email.isEmpty && !password.isEmpty
+        !name.isEmpty
+            && !email.isEmpty
+            && !password.isEmpty
+            && PasswordPolicy.isValid(password)
+            && password == confirmPassword
+    }
+    
+    private var passwordRequirements: [PasswordPolicy.Requirement] {
+        PasswordPolicy.requirements(for: password)
+    }
+    
+    private var passwordsMatch: Bool {
+        !confirmPassword.isEmpty && password == confirmPassword
     }
     
     var body: some View {
@@ -124,6 +136,10 @@ struct AutoWiseCadastro: View {
                             
                             AWSecureField(placeholder: "Senha", text: $password)
                             AWSecureField(placeholder: "Confirmar senha", text: $confirmPassword)
+                            
+                            passwordRequirementsList
+                            
+                            confirmPasswordRow
                         }
                     }
                     
@@ -222,6 +238,58 @@ struct AutoWiseCadastro: View {
         }
     }
     
+    private var passwordRequirementsList: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("A senha deve conter:")
+                .font(AWTheme.caption(12))
+                .foregroundStyle(AWTheme.textSecondary)
+            
+            ForEach(passwordRequirements) { requirement in
+                passwordRequirementRow(requirement)
+            }
+        }
+        .padding(.top, 4)
+        .animation(.easeInOut(duration: 0.2), value: password)
+    }
+    
+    private func passwordRequirementRow(_ requirement: PasswordPolicy.Requirement) -> some View {
+        let tint = requirement.isSatisfied ? AWTheme.success : AWTheme.danger
+        return HStack(alignment: .center, spacing: 8) {
+            Image(systemName: requirement.isSatisfied ? "checkmark.circle.fill" : "xmark.circle.fill")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(tint)
+            Text(requirement.label)
+                .font(AWTheme.caption(12))
+                .foregroundStyle(tint)
+        }
+    }
+    
+    private var confirmPasswordRow: some View {
+        let tint: Color = {
+            if confirmPassword.isEmpty { return AWTheme.textSecondary }
+            return passwordsMatch ? AWTheme.success : AWTheme.danger
+        }()
+        let icon: String = {
+            if confirmPassword.isEmpty { return "circle" }
+            return passwordsMatch ? "checkmark.circle.fill" : "xmark.circle.fill"
+        }()
+        let label: String = {
+            if confirmPassword.isEmpty { return "Confirme a senha" }
+            return passwordsMatch ? "As senhas coincidem" : "As senhas não coincidem"
+        }()
+        
+        return HStack(alignment: .center, spacing: 8) {
+            Image(systemName: icon)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(tint)
+            Text(label)
+                .font(AWTheme.caption(12))
+                .foregroundStyle(tint)
+        }
+        .animation(.easeInOut(duration: 0.2), value: confirmPassword)
+        .animation(.easeInOut(duration: 0.2), value: password)
+    }
+    
     private func syncDefaultRole() {
         if isBootstrapAdmin {
             selectedRole = .admin
@@ -246,6 +314,13 @@ struct AutoWiseCadastro: View {
         guard password == confirmPassword else {
             shouldReturnToLogin = false
             alertMessage = "As senhas não coincidem."
+            showAlert = true
+            return
+        }
+        
+        guard PasswordPolicy.isValid(password) else {
+            shouldReturnToLogin = false
+            alertMessage = PasswordPolicy.failureMessage
             showAlert = true
             return
         }
@@ -312,6 +387,8 @@ struct AutoWiseCadastro: View {
                         alertMessage = "Todos os campos são obrigatórios."
                     case .senhasNaoConferem:
                         alertMessage = "As senhas não coincidem."
+                    case .senhaFraca:
+                        alertMessage = PasswordPolicy.failureMessage
                     case .emailDuplicado:
                         alertMessage = "E-mail já cadastrado."
                     case .limiteAdmins:

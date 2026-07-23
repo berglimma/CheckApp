@@ -93,6 +93,7 @@ enum UserAccessPolicy {
 enum CadastroError: Error {
     case camposObrigatorios
     case senhasNaoConferem
+    case senhaFraca
     case emailDuplicado
     case erroSalvar
     case limiteAdmins

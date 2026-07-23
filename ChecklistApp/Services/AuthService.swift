@@ -142,6 +142,9 @@ final class AuthService: ObservableObject {
         configureIfNeeded()
         
         let normalizedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard PasswordPolicy.isValid(password) else {
+            throw AuthServiceError.weakPassword
+        }
         let hashed = PasswordHasher.hash(password)
         let finalRole = role
         if finalRole == .admin && !SessionManager.canAddAdmin(context: context) {
@@ -618,6 +621,7 @@ enum AuthServiceError: LocalizedError {
     case requiresRecentLogin
     case adminLimitReached
     case networkUnavailable
+    case weakPassword
     
     var errorDescription: String? {
         switch self {
@@ -638,6 +642,8 @@ enum AuthServiceError: LocalizedError {
             return "Limite de \(UserAccessPolicy.maxAdmins) administradores atingido. Cadastre um operador ou libere uma vaga."
         case .networkUnavailable:
             return "Sem conexão. Verifique a rede do Simulator/dispositivo e tente de novo."
+        case .weakPassword:
+            return PasswordPolicy.failureMessage
         }
     }
 }
